@@ -5,6 +5,8 @@ import com.rabbitmq.client.BuiltinExchangeType
 import com.rabbitmq.client.ConnectionFactory
 import org.junit.jupiter.api.Test
 import ru.citeck.ecos.commons.utils.func.UncheckedBiConsumer
+import ru.citeck.ecos.rabbitmq.EcosRabbitChannel
+import ru.citeck.ecos.rabbitmq.EcosRabbitConnection
 import java.util.function.Consumer
 import kotlin.test.assertEquals
 

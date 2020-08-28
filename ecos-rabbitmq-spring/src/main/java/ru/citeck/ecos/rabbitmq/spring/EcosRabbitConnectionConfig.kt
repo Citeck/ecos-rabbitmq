@@ -4,8 +4,8 @@ import com.rabbitmq.client.ConnectionFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import ru.citeck.ecos.commons.rabbit.EcosRabbitConnection
-import ru.citeck.ecos.commons.rabbit.EcosRabbitConnectionProvider
+import ru.citeck.ecos.rabbitmq.EcosRabbitConnection
+import ru.citeck.ecos.rabbitmq.EcosRabbitConnectionProvider
 
 @Configuration
 open class EcosRabbitConnectionConfig {

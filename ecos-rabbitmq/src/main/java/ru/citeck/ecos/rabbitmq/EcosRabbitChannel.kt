@@ -1,4 +1,4 @@
-package ru.citeck.ecos.commons.rabbit
+package ru.citeck.ecos.rabbitmq
 
 import com.rabbitmq.client.AMQP
 import com.rabbitmq.client.BuiltinExchangeType
