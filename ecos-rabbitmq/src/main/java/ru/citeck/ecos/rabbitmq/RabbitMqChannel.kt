@@ -14,6 +14,7 @@ class RabbitMqChannel(private val channel: Channel,
     companion object {
         val log = KotlinLogging.logger {}
         const val PARSING_ERRORS_QUEUE = "ecos.msg.parsing-errors.queue"
+        val nameEscaper = NameUtils.getEscaperWithAllowedChars(".-")
     }
 
     init {
@@ -24,7 +25,7 @@ class RabbitMqChannel(private val channel: Channel,
                               msgType: Class<T>,
                               action: (T, Map<String, Any>) -> Unit) : String {
 
-        return addConsumer(NameUtils.escape(queue), msgType, object : UncheckedBiConsumer<T, Map<String, Any>> {
+        return addConsumer(nameEscaper.escape(queue), msgType, object : UncheckedBiConsumer<T, Map<String, Any>> {
             override fun accept(arg0: T, arg1: Map<String, Any>) {
                 return action.invoke(arg0, arg1)
             }
@@ -36,7 +37,7 @@ class RabbitMqChannel(private val channel: Channel,
                               action: UncheckedBiConsumer<T, Map<String, Any>>) : String {
 
         return channel.basicConsume(
-            NameUtils.escape(queue),
+            nameEscaper.escape(queue),
             true,
             { _, message: Delivery ->
                 run {
@@ -59,7 +60,7 @@ class RabbitMqChannel(private val channel: Channel,
                    headers: Map<String, Any> = emptyMap(),
                    ttl: Long = 0L) {
 
-        publishMsg("", NameUtils.escape(queue), message, headers, ttl)
+        publishMsg("", nameEscaper.escape(queue), message, headers, ttl)
     }
 
     @JvmOverloads
@@ -75,12 +76,12 @@ class RabbitMqChannel(private val channel: Channel,
         if (ttl > 0) {
             props.expiration(ttl.toString())
         }
-        channel.basicPublish(NameUtils.escape(exchange), routingKey, props.build(), body)
+        channel.basicPublish(nameEscaper.escape(exchange), routingKey, props.build(), body)
     }
 
     fun declareQueue(queue: String, durable: Boolean) {
 
-        val validQueue = NameUtils.escape(queue)
+        val validQueue = nameEscaper.escape(queue)
 
         if (context.declaredQueues.add(validQueue)) {
             channel.queueDeclare(
@@ -94,12 +95,12 @@ class RabbitMqChannel(private val channel: Channel,
     }
 
     fun queueBind(queue: String, exchange: String, routingKey: String) {
-        channel.queueBind(NameUtils.escape(queue), NameUtils.escape(exchange), routingKey)
+        channel.queueBind(nameEscaper.escape(queue), nameEscaper.escape(exchange), routingKey)
     }
 
     fun declareExchange(exchange: String, type: BuiltinExchangeType, durable: Boolean) {
 
-        val fixedExchange = NameUtils.escape(exchange)
+        val fixedExchange = nameEscaper.escape(exchange)
 
         if (context.declaredExchanges.add(fixedExchange)) {
             channel.exchangeDeclare(
