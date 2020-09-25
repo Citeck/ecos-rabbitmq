@@ -14,7 +14,7 @@ class RabbitMqChannel(private val channel: Channel,
     companion object {
         val log = KotlinLogging.logger {}
         const val PARSING_ERRORS_QUEUE = "ecos.msg.parsing-errors.queue"
-        val nameEscaper = NameUtils.getEscaperWithAllowedChars(".-")
+        val nameEscaper = NameUtils.getEscaperWithAllowedChars(".-:")
     }
 
     init {
