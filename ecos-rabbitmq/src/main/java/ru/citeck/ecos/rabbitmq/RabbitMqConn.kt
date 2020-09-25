@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
 import kotlin.concurrent.thread
 
-class EcosRabbitConnection @JvmOverloads constructor(
+class RabbitMqConn @JvmOverloads constructor(
                            private val connectionFactory: ConnectionFactory,
                            private val initSleepMs: Long = 0L,
                            private val threads: Int = 16) {
@@ -27,7 +27,7 @@ class EcosRabbitConnection @JvmOverloads constructor(
     private var connection: Connection? = null
     private val initFuture = CompletableFuture<Boolean>()
     private val postInitActions = ConcurrentLinkedQueue<Consumer<Connection>>()
-    private val connectionContext = EcosRabbitConnectionCtx(this)
+    private val connectionContext = RabbitMqConnCtx(this)
 
     private fun init() {
 
@@ -107,9 +107,9 @@ class EcosRabbitConnection @JvmOverloads constructor(
         initFuture.get(timeoutMs, TimeUnit.MILLISECONDS)
     }
 
-    fun doWithNewChannel(action: Consumer<EcosRabbitChannel>) {
+    fun doWithNewChannel(action: Consumer<RabbitMqChannel>) {
         doWithConnection(Consumer {
-            action.accept(EcosRabbitChannel(it.createChannel(), connectionContext))
+            action.accept(RabbitMqChannel(it.createChannel(), connectionContext))
         })
     }
 

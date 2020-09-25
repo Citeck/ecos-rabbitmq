@@ -5,16 +5,15 @@ import com.rabbitmq.client.BuiltinExchangeType
 import com.rabbitmq.client.Channel
 import com.rabbitmq.client.Delivery
 import mu.KotlinLogging
+import ru.citeck.ecos.commons.utils.NameUtils
 import ru.citeck.ecos.commons.utils.func.UncheckedBiConsumer
 
-class EcosRabbitChannel(private val channel: Channel,
-                        private val context: EcosRabbitConnectionCtx) {
+class RabbitMqChannel(private val channel: Channel,
+                      private val context: RabbitMqConnCtx) {
 
     companion object {
         val log = KotlinLogging.logger {}
         const val PARSING_ERRORS_QUEUE = "ecos.msg.parsing-errors.queue"
-
-        val INVALID_NAME_CHARS_REGEX = "[^0-9a-zA-Z_\\-.:]".toRegex()
     }
 
     init {
@@ -25,7 +24,7 @@ class EcosRabbitChannel(private val channel: Channel,
                               msgType: Class<T>,
                               action: (T, Map<String, Any>) -> Unit) : String {
 
-        return addConsumer(queue, msgType, object : UncheckedBiConsumer<T, Map<String, Any>> {
+        return addConsumer(NameUtils.escape(queue), msgType, object : UncheckedBiConsumer<T, Map<String, Any>> {
             override fun accept(arg0: T, arg1: Map<String, Any>) {
                 return action.invoke(arg0, arg1)
             }
@@ -37,7 +36,7 @@ class EcosRabbitChannel(private val channel: Channel,
                               action: UncheckedBiConsumer<T, Map<String, Any>>) : String {
 
         return channel.basicConsume(
-            queue,
+            NameUtils.escape(queue),
             true,
             { _, message: Delivery ->
                 run {
@@ -60,7 +59,7 @@ class EcosRabbitChannel(private val channel: Channel,
                    headers: Map<String, Any> = emptyMap(),
                    ttl: Long = 0L) {
 
-        publishMsg("", queue, message, headers, ttl)
+        publishMsg("", NameUtils.escape(queue), message, headers, ttl)
     }
 
     @JvmOverloads
@@ -76,12 +75,12 @@ class EcosRabbitChannel(private val channel: Channel,
         if (ttl > 0) {
             props.expiration(ttl.toString())
         }
-        channel.basicPublish(exchange, routingKey, props.build(), body)
+        channel.basicPublish(NameUtils.escape(exchange), routingKey, props.build(), body)
     }
 
     fun declareQueue(queue: String, durable: Boolean) {
 
-        val validQueue = getValidName(queue)
+        val validQueue = NameUtils.escape(queue)
 
         if (context.declaredQueues.add(validQueue)) {
             channel.queueDeclare(
@@ -95,15 +94,12 @@ class EcosRabbitChannel(private val channel: Channel,
     }
 
     fun queueBind(queue: String, exchange: String, routingKey: String) {
-
-        val validQueue = getValidName(queue)
-
-        channel.queueBind(validQueue, exchange, routingKey)
+        channel.queueBind(NameUtils.escape(queue), NameUtils.escape(exchange), routingKey)
     }
 
     fun declareExchange(exchange: String, type: BuiltinExchangeType, durable: Boolean) {
 
-        val fixedExchange = getValidName(exchange)
+        val fixedExchange = NameUtils.escape(exchange)
 
         if (context.declaredExchanges.add(fixedExchange)) {
             channel.exchangeDeclare(
@@ -115,10 +111,6 @@ class EcosRabbitChannel(private val channel: Channel,
                 emptyMap()
             )
         }
-    }
-
-    private fun getValidName(name: String) : String {
-        return name.replace(INVALID_NAME_CHARS_REGEX, "_")
     }
 
     class ParsingError(
