@@ -1,6 +1,7 @@
 package ru.citeck.ecos.rabbitmq
 
 import ecos.com.fasterxml.jackson210.dataformat.cbor.CBORFactory
+import ru.citeck.ecos.commons.json.DeserFeature
 import ru.citeck.ecos.commons.json.Json
 import ru.citeck.ecos.commons.json.JsonOptions
 import java.io.ByteArrayInputStream
@@ -17,6 +18,7 @@ class RabbitMqConnCtx(val conn: RabbitMqConn) {
 
     private val msgBodyMapper = Json.newMapper(JsonOptions.create {
         setFactory(CBORFactory())
+        disable(DeserFeature.FAIL_ON_UNKNOWN_PROPERTIES)
     })
 
     fun toMsgBodyBytes(data: Any) : ByteArray {

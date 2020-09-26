@@ -122,4 +122,8 @@ class RabbitMqConn @JvmOverloads constructor(
             postInitActions.add(action)
         }
     }
+
+    fun close() {
+        connection?.close()
+    }
 }

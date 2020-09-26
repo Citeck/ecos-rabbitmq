@@ -9,7 +9,8 @@ class RabbitMqConnFactory {
         val log = KotlinLogging.logger {}
     }
 
-    fun createConnection(props: RabbitMqConnProps) : RabbitMqConn? {
+    @JvmOverloads
+    fun createConnection(props: RabbitMqConnProps, initDelayMs: Long = 10_000) : RabbitMqConn? {
 
         val host = props.host
 
@@ -32,6 +33,6 @@ class RabbitMqConnFactory {
             connectionFactory.port = port
         }
 
-        return RabbitMqConn(connectionFactory, 10_000)
+        return RabbitMqConn(connectionFactory, initDelayMs)
     }
 }
