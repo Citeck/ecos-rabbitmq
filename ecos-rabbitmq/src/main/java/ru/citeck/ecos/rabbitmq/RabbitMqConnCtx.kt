@@ -16,12 +16,14 @@ class RabbitMqConnCtx(val conn: RabbitMqConn) {
     val declaredQueues: MutableSet<String> = Collections.newSetFromMap(ConcurrentHashMap())
     val declaredExchanges: MutableSet<String> = Collections.newSetFromMap(ConcurrentHashMap())
 
-    private val msgBodyMapper = Json.newMapper(JsonOptions.create {
-        setFactory(CBORFactory())
-        disable(DeserFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-    })
+    private val msgBodyMapper = Json.newMapper(
+        JsonOptions.create {
+            setFactory(CBORFactory())
+            disable(DeserFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+        }
+    )
 
-    fun toMsgBodyBytes(data: Any) : ByteArray {
+    fun toMsgBodyBytes(data: Any): ByteArray {
 
         val baos = ByteArrayOutputStream()
 
@@ -31,7 +33,7 @@ class RabbitMqConnCtx(val conn: RabbitMqConn) {
         return baos.toByteArray()
     }
 
-    fun <T : Any> fromMsgBodyBytes(bytes: ByteArray, type: Class<T>) : T? {
+    fun <T : Any> fromMsgBodyBytes(bytes: ByteArray, type: Class<T>): T? {
         val input = GZIPInputStream(ByteArrayInputStream(bytes))
         return msgBodyMapper.read(input, type)
     }

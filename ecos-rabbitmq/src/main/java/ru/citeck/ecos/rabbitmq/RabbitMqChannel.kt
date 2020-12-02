@@ -8,8 +8,10 @@ import mu.KotlinLogging
 import ru.citeck.ecos.commons.utils.NameUtils
 import ru.citeck.ecos.commons.utils.func.UncheckedBiConsumer
 
-class RabbitMqChannel(private val channel: Channel,
-                      private val context: RabbitMqConnCtx) {
+class RabbitMqChannel(
+    private val channel: Channel,
+    private val context: RabbitMqConnCtx
+) {
 
     companion object {
         val log = KotlinLogging.logger {}
@@ -21,20 +23,27 @@ class RabbitMqChannel(private val channel: Channel,
         declareQueue(PARSING_ERRORS_QUEUE, true)
     }
 
-    fun <T : Any> addConsumer(queue: String,
-                              msgType: Class<T>,
-                              action: (T, Map<String, Any>) -> Unit) : String {
+    fun <T : Any> addConsumer(
+        queue: String,
+        msgType: Class<T>,
+        action: (T, Map<String, Any>) -> Unit
+    ): String {
 
-        return addConsumer(nameEscaper.escape(queue), msgType, object : UncheckedBiConsumer<T, Map<String, Any>> {
-            override fun accept(arg0: T, arg1: Map<String, Any>) {
-                return action.invoke(arg0, arg1)
+        return addConsumer(
+            nameEscaper.escape(queue), msgType,
+            object : UncheckedBiConsumer<T, Map<String, Any>> {
+                override fun accept(arg0: T, arg1: Map<String, Any>) {
+                    return action.invoke(arg0, arg1)
+                }
             }
-        })
+        )
     }
 
-    fun <T : Any> addConsumer(queue: String,
-                              msgType: Class<T>,
-                              action: UncheckedBiConsumer<T, Map<String, Any>>) : String {
+    fun <T : Any> addConsumer(
+        queue: String,
+        msgType: Class<T>,
+        action: UncheckedBiConsumer<T, Map<String, Any>>
+    ): String {
 
         return channel.basicConsume(
             nameEscaper.escape(queue),
@@ -55,20 +64,24 @@ class RabbitMqChannel(private val channel: Channel,
     }
 
     @JvmOverloads
-    fun publishMsg(queue: String,
-                   message: Any,
-                   headers: Map<String, Any> = emptyMap(),
-                   ttl: Long = 0L) {
+    fun publishMsg(
+        queue: String,
+        message: Any,
+        headers: Map<String, Any> = emptyMap(),
+        ttl: Long = 0L
+    ) {
 
         publishMsg("", nameEscaper.escape(queue), message, headers, ttl)
     }
 
     @JvmOverloads
-    fun publishMsg(exchange: String,
-                   routingKey: String,
-                   message: Any,
-                   headers: Map<String, Any> = emptyMap(),
-                   ttl: Long = 0L) {
+    fun publishMsg(
+        exchange: String,
+        routingKey: String,
+        message: Any,
+        headers: Map<String, Any> = emptyMap(),
+        ttl: Long = 0L
+    ) {
 
         val body = context.toMsgBodyBytes(message)
 

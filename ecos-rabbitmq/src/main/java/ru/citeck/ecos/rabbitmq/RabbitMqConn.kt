@@ -8,14 +8,14 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-
 import java.util.function.Consumer
 import kotlin.concurrent.thread
 
 class RabbitMqConn @JvmOverloads constructor(
-                           private val connectionFactory: ConnectionFactory,
-                           private val initSleepMs: Long = 0L,
-                           private val threads: Int = 16) {
+    private val connectionFactory: ConnectionFactory,
+    private val initSleepMs: Long = 0L,
+    private val threads: Int = 16
+) {
 
     companion object {
         val log = KotlinLogging.logger {}
@@ -59,9 +59,9 @@ class RabbitMqConn @JvmOverloads constructor(
 
                     log.info {
                         "Connected to ${props["product"]} " +
-                        "version ${props["version"]} " +
-                        "platform ${props["platform"]} " +
-                        "information ${props["information"]}"
+                            "version ${props["version"]} " +
+                            "platform ${props["platform"]} " +
+                            "information ${props["information"]}"
                     }
 
                     this.connection = connection
@@ -108,9 +108,11 @@ class RabbitMqConn @JvmOverloads constructor(
     }
 
     fun doWithNewChannel(action: Consumer<RabbitMqChannel>) {
-        doWithConnection(Consumer {
-            action.accept(RabbitMqChannel(it.createChannel(), connectionContext))
-        })
+        doWithConnection(
+            Consumer {
+                action.accept(RabbitMqChannel(it.createChannel(), connectionContext))
+            }
+        )
     }
 
     fun doWithConnection(action: Consumer<Connection>) {

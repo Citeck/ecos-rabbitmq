@@ -26,14 +26,16 @@ class RabbitMqConnTest {
         connection.doWithNewChannel(Consumer { newChannel -> mqChannel = newChannel })
 
         mqChannel.declareQueue("test", false)
-        mqChannel.addConsumer("test",
+        mqChannel.addConsumer(
+            "test",
             Message::class.java,
             object : UncheckedBiConsumer<Message, Map<String, Any>> {
 
                 override fun accept(arg0: Message, arg1: Map<String, Any>) {
                     results.add(arg0)
                 }
-            })
+            }
+        )
 
         val msg = Message(
             "field0",
@@ -80,7 +82,7 @@ class RabbitMqConnTest {
         val innerField0: String
     )
 
-    class Bytes (val bytes: ByteArray) {
+    class Bytes(val bytes: ByteArray) {
         override fun equals(other: Any?): Boolean {
             if (this === other) {
                 return true

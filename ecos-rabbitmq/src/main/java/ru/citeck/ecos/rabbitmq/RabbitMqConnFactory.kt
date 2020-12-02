@@ -10,7 +10,7 @@ class RabbitMqConnFactory {
     }
 
     @JvmOverloads
-    fun createConnection(props: RabbitMqConnProps, initDelayMs: Long = 10_000) : RabbitMqConn? {
+    fun createConnection(props: RabbitMqConnProps, initDelayMs: Long = 10_000): RabbitMqConn? {
 
         val host = props.host
 
