@@ -127,6 +127,10 @@ class RabbitMqChannel(
         }
     }
 
+    fun close() {
+        channel.close()
+    }
+
     class ParsingError(
         val message: Delivery
     )
