@@ -29,11 +29,21 @@ class RabbitMqConn @JvmOverloads constructor(
     private val postInitActions = ConcurrentLinkedQueue<Consumer<Connection>>()
     private val connectionContext = RabbitMqConnCtx(this)
 
+    @Synchronized
     private fun init() {
-
         if (initStarted) {
             return
         }
+        initStarted = true
+        try {
+            initThreadImpl()
+        } catch (e: Exception) {
+            initStarted = false
+            throw e
+        }
+    }
+
+    private fun initThreadImpl() {
 
         thread(start = true, isDaemon = false, name = "ECOS rabbit connection initializer") {
 
@@ -99,7 +109,6 @@ class RabbitMqConn @JvmOverloads constructor(
                 }
             }
         }
-        initStarted = true
     }
 
     fun waitUntilReady(timeoutMs: Long) {
@@ -120,8 +129,8 @@ class RabbitMqConn @JvmOverloads constructor(
         if (connection != null) {
             action.accept(connection)
         } else {
-            init()
             postInitActions.add(action)
+            init()
         }
     }
 
