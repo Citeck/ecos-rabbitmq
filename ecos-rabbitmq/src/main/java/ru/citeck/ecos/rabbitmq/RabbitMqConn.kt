@@ -3,7 +3,6 @@ package ru.citeck.ecos.rabbitmq
 import com.rabbitmq.client.Connection
 import com.rabbitmq.client.ConnectionFactory
 import mu.KotlinLogging
-import java.lang.IllegalStateException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
@@ -45,6 +44,17 @@ class RabbitMqConn @JvmOverloads constructor(
 
     private fun initThreadImpl() {
 
+        var initializerEnabled = true
+
+        Runtime.getRuntime().addShutdownHook(
+            Thread {
+                log.info("Shutdown hook triggered")
+                initializerEnabled = false
+                this.connection?.close()
+                log.info("Shutdown hook completed")
+            }
+        )
+
         thread(start = true, isDaemon = false, name = "ECOS rabbit connection initializer") {
 
             if (initSleepMs > 0) {
@@ -55,7 +65,7 @@ class RabbitMqConn @JvmOverloads constructor(
 
             var tryWithoutLogErrorStartTime = System.currentTimeMillis()
 
-            while (true) {
+            while (initializerEnabled) {
 
                 var connection: Connection? = null
 
