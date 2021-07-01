@@ -7,6 +7,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.Consumer
 import kotlin.concurrent.thread
 
@@ -44,12 +45,12 @@ class RabbitMqConn @JvmOverloads constructor(
 
     private fun initThreadImpl() {
 
-        var initializerEnabled = true
+        val initializerEnabled = AtomicBoolean(true)
 
         Runtime.getRuntime().addShutdownHook(
             Thread {
                 log.info("Shutdown hook triggered")
-                initializerEnabled = false
+                initializerEnabled.set(false)
                 this.connection?.close()
                 log.info("Shutdown hook completed")
             }
@@ -65,7 +66,7 @@ class RabbitMqConn @JvmOverloads constructor(
 
             var tryWithoutLogErrorStartTime = System.currentTimeMillis()
 
-            while (initializerEnabled) {
+            while (initializerEnabled.get()) {
 
                 var connection: Connection? = null
 
