@@ -7,4 +7,5 @@ class RabbitMqConnProps {
     var password: String? = null
     var virtualHost: String? = null
     var port: Int? = null
+    var threadPoolSize: Int? = null
 }
