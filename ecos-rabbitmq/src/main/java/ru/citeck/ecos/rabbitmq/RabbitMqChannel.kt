@@ -25,12 +25,13 @@ class RabbitMqChannel(
 
     fun <T : Any> addConsumer(
         queue: String,
+        _autoAck: Boolean?,
         msgType: Class<T>,
         action: (T, Map<String, Any>) -> Unit
     ): String {
 
         return addConsumer(
-            nameEscaper.escape(queue), msgType,
+            nameEscaper.escape(queue), msgType, _autoAck,
             object : UncheckedBiConsumer<T, Map<String, Any>> {
                 override fun accept(arg0: T, arg1: Map<String, Any>) {
                     return action.invoke(arg0, arg1)
@@ -45,9 +46,23 @@ class RabbitMqChannel(
         action: UncheckedBiConsumer<T, Map<String, Any>>
     ): String {
 
+        return addConsumer(queue, msgType, null, action)
+    }
+
+    fun <T : Any> addConsumer(
+        queue: String,
+        msgType: Class<T>,
+        _autoAck: Boolean?,
+        action: UncheckedBiConsumer<T, Map<String, Any>>
+    ): String {
+
+        var autoAck = _autoAck
+        if (autoAck == null) {
+            autoAck = true
+        }
         return channel.basicConsume(
             nameEscaper.escape(queue),
-            true,
+            autoAck,
             { _, message: Delivery ->
                 run {
                     val body = context.fromMsgBodyBytes(message.body, msgType)
