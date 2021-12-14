@@ -4,6 +4,6 @@ pipelines:
         - step:
            script:
              - git remote add sync git@github.com:Citeck/ecos-rabbitmq.git
-             - git checkout master
+             - git checkout develop
              - git pull
-             - git push sync master
+             - git push sync develop
