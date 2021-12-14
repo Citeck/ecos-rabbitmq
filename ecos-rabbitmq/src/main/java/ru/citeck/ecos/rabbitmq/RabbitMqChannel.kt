@@ -7,6 +7,8 @@ import com.rabbitmq.client.Delivery
 import mu.KotlinLogging
 import ru.citeck.ecos.commons.utils.NameUtils
 import ru.citeck.ecos.commons.utils.func.UncheckedBiConsumer
+import ru.citeck.ecos.rabbitmq.ack.AckedMessage
+import ru.citeck.ecos.rabbitmq.ack.AckedMessageImpl
 
 class RabbitMqChannel(
     private val channel: Channel,
@@ -30,7 +32,7 @@ class RabbitMqChannel(
     ): String {
 
         return addConsumer(
-            nameEscaper.escape(queue), msgType,
+            queue, msgType,
             object : UncheckedBiConsumer<T, Map<String, Any>> {
                 override fun accept(arg0: T, arg1: Map<String, Any>) {
                     return action.invoke(arg0, arg1)
@@ -39,15 +41,63 @@ class RabbitMqChannel(
         )
     }
 
+    fun <T : Any> addAckedConsumer(
+        queue: String,
+        msgType: Class<T>,
+        action: (AckedMessage<T>, Map<String, Any>) -> Unit
+    ): String {
+
+        return addAckedConsumer(
+            queue, msgType,
+            object : UncheckedBiConsumer<AckedMessage<T>, Map<String, Any>> {
+                override fun accept(arg0: AckedMessage<T>, arg1: Map<String, Any>) {
+                    return action.invoke(arg0, arg1)
+                }
+            }
+        )
+    }
+
+    fun <T : Any> addAckedConsumer(
+        queue: String,
+        msgType: Class<T>,
+        action: UncheckedBiConsumer<AckedMessage<T>, Map<String, Any>>
+    ): String {
+
+        return basicConsumeImpl(queue, false, msgType) { msg, headers, delivery ->
+
+            val ackedMsg = AckedMessageImpl(msg, channel, delivery.envelope.deliveryTag)
+            try {
+                @Suppress("UNCHECKED_CAST")
+                action.accept(ackedMsg, headers)
+                ackedMsg.ack()
+            } catch (e: Exception) {
+                ackedMsg.nack()
+                throw e
+            }
+        }
+    }
+
     fun <T : Any> addConsumer(
         queue: String,
         msgType: Class<T>,
         action: UncheckedBiConsumer<T, Map<String, Any>>
     ): String {
 
+        return basicConsumeImpl(queue, true, msgType) { msg, headers, _ ->
+            action.accept(msg, headers)
+        }
+    }
+
+    private inline fun <T : Any> basicConsumeImpl(
+        queue: String,
+        autoAck: Boolean,
+        msgType: Class<T>,
+        crossinline action: (T, Map<String, Any>, Delivery) -> Unit
+    ): String {
+
         return channel.basicConsume(
             nameEscaper.escape(queue),
-            true,
+            autoAck,
             { _, message: Delivery ->
                 run {
                     val body = context.fromMsgBodyBytes(message.body, msgType)
@@ -55,7 +105,7 @@ class RabbitMqChannel(
                         publishMsg(PARSING_ERRORS_QUEUE, ParsingError(message))
                     } else {
                         val headers = message.properties.headers ?: emptyMap()
-                        action.accept(body, headers)
+                        action.invoke(body, headers, message)
                     }
                 }
             },

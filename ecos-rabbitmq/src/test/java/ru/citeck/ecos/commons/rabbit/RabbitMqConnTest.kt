@@ -3,6 +3,7 @@ package ru.citeck.ecos.commons.rabbit
 import com.github.fridujo.rabbitmq.mock.MockConnectionFactory
 import com.rabbitmq.client.BuiltinExchangeType
 import com.rabbitmq.client.ConnectionFactory
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import ru.citeck.ecos.commons.utils.func.UncheckedBiConsumer
 import ru.citeck.ecos.rabbitmq.RabbitMqChannel
@@ -60,6 +61,41 @@ class RabbitMqConnTest {
         waitSize(results, 2)
         assertEquals(2, results.size)
         assertEquals(msg, results[1])
+
+        val expectedMessages = mutableListOf<Message>()
+        for (i in 0..10) {
+            expectedMessages.add(
+                Message(
+                    "abc-$i",
+                    123 + i,
+                    123L + i,
+                    Bytes(byteArrayOf(1.toByte(), 2.toByte(), 3.toByte())),
+                    Inner("inner-$i")
+                )
+            )
+        }
+
+        val ackedMessages = mutableListOf<Message>()
+        mqChannel.declareQueue("acked-queue", true)
+        mqChannel.addAckedConsumer("acked-queue", Message::class.java) { ackedMsg, _ ->
+            ackedMessages.add(ackedMsg.getContent())
+            if (ackedMessages.size < 2) {
+                // ack first messages to check that reack doesn't throw exception
+                ackedMsg.ack()
+            } else if (ackedMessages.size == expectedMessages.size) {
+                // nack last element to check that it will be re-consumed
+                ackedMsg.nack()
+            }
+        }
+
+        for (expMsg in expectedMessages) {
+            mqChannel.publishMsg("acked-queue", expMsg)
+        }
+
+        Thread.sleep(1000)
+
+        expectedMessages.add(expectedMessages.last())
+        assertThat(ackedMessages).containsExactlyElementsOf(expectedMessages)
     }
 
     private fun waitSize(collection: Collection<*>, expectedSize: Int) {

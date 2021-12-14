@@ -128,9 +128,15 @@ class RabbitMqConn @JvmOverloads constructor(
     }
 
     fun doWithNewChannel(action: Consumer<RabbitMqChannel>) {
+        doWithNewChannel(1, action)
+    }
+
+    fun doWithNewChannel(qos: Int, action: Consumer<RabbitMqChannel>) {
         doWithConnection(
             Consumer {
-                action.accept(RabbitMqChannel(it.createChannel(), connectionContext))
+                val channel = it.createChannel()
+                channel.basicQos(qos)
+                action.accept(RabbitMqChannel(channel, connectionContext))
             }
         )
     }
