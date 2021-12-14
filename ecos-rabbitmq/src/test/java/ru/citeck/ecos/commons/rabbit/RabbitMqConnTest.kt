@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test
 import ru.citeck.ecos.commons.utils.func.UncheckedBiConsumer
 import ru.citeck.ecos.rabbitmq.RabbitMqChannel
 import ru.citeck.ecos.rabbitmq.RabbitMqConn
-import ru.citeck.ecos.rabbitmq.ack.AckedMessage
 import java.util.function.Consumer
 import kotlin.test.assertEquals
 
@@ -65,13 +64,15 @@ class RabbitMqConnTest {
 
         val expectedMessages = mutableListOf<Message>()
         for (i in 0..10) {
-            expectedMessages.add(Message(
-                "abc-$i",
-                123 + i,
-                123L + i,
-                Bytes(byteArrayOf(1.toByte(), 2.toByte(), 3.toByte())),
-                Inner("inner-$i")
-            ))
+            expectedMessages.add(
+                Message(
+                    "abc-$i",
+                    123 + i,
+                    123L + i,
+                    Bytes(byteArrayOf(1.toByte(), 2.toByte(), 3.toByte())),
+                    Inner("inner-$i")
+                )
+            )
         }
 
         val ackedMessages = mutableListOf<Message>()
