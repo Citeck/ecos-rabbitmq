@@ -33,6 +33,11 @@ class RabbitMqConnFactory {
             connectionFactory.port = port
         }
 
-        return RabbitMqConn(connectionFactory, initDelayMs)
+        var threadPoolSize = props.threadPoolSize
+        if (threadPoolSize == null) {
+            threadPoolSize = 16
+        }
+
+        return RabbitMqConn(connectionFactory, initDelayMs, threadPoolSize)
     }
 }
