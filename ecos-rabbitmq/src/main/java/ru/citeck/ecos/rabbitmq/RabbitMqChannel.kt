@@ -71,7 +71,13 @@ class RabbitMqChannel(
                 action.accept(ackedMsg, headers)
                 ackedMsg.ack()
             } catch (e: Exception) {
-                ackedMsg.nack()
+                if (channel.isOpen) {
+                    try {
+                        ackedMsg.nack()
+                    } catch (nackException: Exception) {
+                        log.error(nackException) { "Exception while nack" }
+                    }
+                }
                 throw e
             }
         }

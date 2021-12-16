@@ -29,6 +29,8 @@ class RabbitMqConn @JvmOverloads constructor(
     private val postInitActions = ConcurrentLinkedQueue<Consumer<Connection>>()
     private val connectionContext = RabbitMqConnCtx(this)
 
+    private var wasClosed = false
+
     @Synchronized
     private fun init() {
         if (initStarted) {
@@ -51,7 +53,9 @@ class RabbitMqConn @JvmOverloads constructor(
             Thread {
                 log.info("Shutdown hook triggered")
                 initializerEnabled.set(false)
-                this.connection?.close()
+                if (!wasClosed) {
+                    this.connection?.close()
+                }
                 log.info("Shutdown hook completed")
             }
         )
@@ -153,5 +157,6 @@ class RabbitMqConn @JvmOverloads constructor(
 
     fun close() {
         connection?.close()
+        wasClosed = true
     }
 }
