@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
 
-class RabbitMqConnCtx(val conn: RabbitMqConn) {
+class RabbitMqConnCtx {
 
     val declaredQueues: MutableSet<String> = Collections.newSetFromMap(ConcurrentHashMap())
     val declaredExchanges: MutableSet<String> = Collections.newSetFromMap(ConcurrentHashMap())

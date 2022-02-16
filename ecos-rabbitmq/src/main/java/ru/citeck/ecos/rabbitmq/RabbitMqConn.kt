@@ -27,7 +27,7 @@ class RabbitMqConn @JvmOverloads constructor(
     private var connection: Connection? = null
     private val initFuture = CompletableFuture<Boolean>()
     private val postInitActions = ConcurrentLinkedQueue<Consumer<Connection>>()
-    private val connectionContext = RabbitMqConnCtx(this)
+    private val connectionContext = RabbitMqConnCtx()
 
     private var wasClosed = false
 

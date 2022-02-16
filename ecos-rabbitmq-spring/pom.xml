@@ -26,7 +26,6 @@
             <groupId>ru.citeck.ecos.rabbitmq</groupId>
             <artifactId>ecos-rabbitmq</artifactId>
             <version>${project.version}</version>
-            <scope>provided</scope>
         </dependency>
 
         <dependency>
