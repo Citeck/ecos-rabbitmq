@@ -106,7 +106,12 @@ class RabbitMqChannel(
             autoAck,
             { _, message: Delivery ->
                 run {
-                    val body = context.fromMsgBodyBytes(message.body, msgType)
+                    val body: T? = if (msgType == Delivery::class.java) {
+                        @Suppress("UNCHECKED_CAST")
+                        message as T
+                    } else {
+                        context.fromMsgBodyBytes(message.body, msgType)
+                    }
                     if (body == null) {
                         publishMsg(PARSING_ERRORS_QUEUE, ParsingError(message))
                     } else {
@@ -139,7 +144,11 @@ class RabbitMqChannel(
         ttl: Long = 0L
     ) {
 
-        val body = context.toMsgBodyBytes(message)
+        val body = if (message is ByteArray) {
+            message
+        } else {
+            context.toMsgBodyBytes(message)
+        }
 
         val props = AMQP.BasicProperties.Builder().headers(headers)
         if (ttl > 0) {
