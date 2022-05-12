@@ -14,7 +14,7 @@ class RabbitMqConnFactory {
 
         val host = props.host
 
-        if (host != null && host.isBlank()) {
+        if (host.isBlank()) {
             log.error { "RabbitMq host is empty. Props: $props" }
             return null
         }
@@ -24,20 +24,13 @@ class RabbitMqConnFactory {
         connectionFactory.host = props.host
         connectionFactory.username = props.username
         connectionFactory.password = props.password
+        connectionFactory.virtualHost = props.virtualHost
 
-        if (props.virtualHost != null) {
-            connectionFactory.virtualHost = props.virtualHost
-        }
         val port = props.port
         if (port != null) {
             connectionFactory.port = port
         }
 
-        var threadPoolSize = props.threadPoolSize
-        if (threadPoolSize == null) {
-            threadPoolSize = 16
-        }
-
-        return RabbitMqConn(connectionFactory, initDelayMs, threadPoolSize)
+        return RabbitMqConn(connectionFactory, initDelayMs, props.threadPoolSize)
     }
 }

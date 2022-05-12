@@ -97,7 +97,7 @@ class RabbitMqChannel(
     private inline fun <T : Any> basicConsumeImpl(
         queue: String,
         autoAck: Boolean,
-        msgType: Class<T>,
+        msgType: Class<out T>,
         crossinline action: (T, Map<String, Any>, Delivery) -> Unit
     ): String {
 

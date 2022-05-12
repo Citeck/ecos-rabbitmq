@@ -1,11 +1,10 @@
 package ru.citeck.ecos.rabbitmq
 
-class RabbitMqConnProps {
-
-    var host: String? = null
-    var username: String? = null
-    var password: String? = null
-    var virtualHost: String? = null
-    var port: Int? = null
-    var threadPoolSize: Int? = null
-}
+class RabbitMqConnProps(
+    val host: String = "localhost",
+    val username: String = "admin",
+    val password: String = "admin",
+    val virtualHost: String = "/",
+    val port: Int? = null,
+    val threadPoolSize: Int = 16
+)

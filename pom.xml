@@ -7,10 +7,12 @@
 
     <groupId>ru.citeck.ecos.rabbitmq</groupId>
     <artifactId>ecos-rabbitmq-project</artifactId>
-    <version>2.3.2</version>
+    <version>${revision}</version>
     <packaging>pom</packaging>
 
     <properties>
+
+        <revision>2.3.2</revision>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
@@ -25,10 +27,10 @@
         <slf4j.version>1.7.28</slf4j.version>
         <assertj-core.version>3.19.0</assertj-core.version>
 
-        <kotlin.version>1.5.21</kotlin.version>
+        <kotlin.version>1.6.21</kotlin.version>
         <kotlin.logging.version>1.12.5</kotlin.logging.version>
 
-        <ecos.commons.version>2.5.0</ecos.commons.version>
+        <ecos.commons.version>2.6.2</ecos.commons.version>
 
     </properties>
 
@@ -129,7 +131,7 @@
                 <plugin>
                     <groupId>com.github.gantsign.maven</groupId>
                     <artifactId>ktlint-maven-plugin</artifactId>
-                    <version>1.7.0</version>
+                    <version>1.13.1</version>
                     <executions>
                         <execution>
                             <id>format</id>
@@ -190,13 +192,38 @@
                 </executions>
             </plugin>
 
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>1.2.7</version>
+                <configuration>
+                    <updatePomFile>true</updatePomFile>
+                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten.clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
         </plugins>
 
     </build>
 
     <modules>
         <module>ecos-rabbitmq</module>
-        <module>ecos-rabbitmq-spring</module>
     </modules>
 
     <repositories>

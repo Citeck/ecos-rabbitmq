@@ -159,10 +159,11 @@ class RealRabbitMqTest {
 
     private fun createRealRabbitMqConnection(): RabbitMqConn {
 
-        val props = RabbitMqConnProps()
-        props.host = REAL_CONN_HOST
-        props.username = REAL_CONN_USERNAME
-        props.password = REAL_CONN_PASSWORD
+        val props = RabbitMqConnProps(
+            host = REAL_CONN_HOST,
+            username = REAL_CONN_USERNAME,
+            password = REAL_CONN_PASSWORD
+        )
 
         val rmqFactory = RabbitMqConnFactory()
         return rmqFactory.createConnection(props, initDelayMs = 0)!!
