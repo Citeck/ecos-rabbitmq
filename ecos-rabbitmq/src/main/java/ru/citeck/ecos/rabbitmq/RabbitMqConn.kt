@@ -3,18 +3,15 @@ package ru.citeck.ecos.rabbitmq
 import com.rabbitmq.client.Connection
 import com.rabbitmq.client.ConnectionFactory
 import mu.KotlinLogging
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.Consumer
 import kotlin.concurrent.thread
 
 class RabbitMqConn @JvmOverloads constructor(
     private val connectionFactory: ConnectionFactory,
-    private val initSleepMs: Long = 0L,
-    private val threads: Int = 16
+    executor: ExecutorService? = null,
+    private val initSleepMs: Long = 0L
 ) {
 
     companion object {
@@ -30,6 +27,8 @@ class RabbitMqConn @JvmOverloads constructor(
     private val connectionContext = RabbitMqConnCtx()
 
     private var wasClosed = false
+
+    private val executor = executor ?: Executors.newFixedThreadPool(16)
 
     @Synchronized
     private fun init() {
@@ -75,7 +74,7 @@ class RabbitMqConn @JvmOverloads constructor(
                 var connection: Connection? = null
 
                 try {
-                    connection = connectionFactory.newConnection(Executors.newFixedThreadPool(threads))
+                    connection = connectionFactory.newConnection(executor)
 
                     if (!connection.isOpen) {
                         throw IllegalStateException("Connection is not open")

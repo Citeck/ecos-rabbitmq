@@ -171,7 +171,7 @@ class RealRabbitMqTest {
 
     private fun createMockRabbitMqConnection(): RabbitMqConn {
         val factory = MockConnectionFactory()
-        return RabbitMqConn(factory, 0L)
+        return RabbitMqConn(factory, null, 0L)
     }
 
     private fun createRabbitMqConnection(): RabbitMqConn {

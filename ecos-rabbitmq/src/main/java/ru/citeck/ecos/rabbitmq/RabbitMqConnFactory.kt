@@ -2,6 +2,7 @@ package ru.citeck.ecos.rabbitmq
 
 import com.rabbitmq.client.ConnectionFactory
 import mu.KotlinLogging
+import java.util.concurrent.ExecutorService
 
 class RabbitMqConnFactory {
 
@@ -10,7 +11,11 @@ class RabbitMqConnFactory {
     }
 
     @JvmOverloads
-    fun createConnection(props: RabbitMqConnProps, initDelayMs: Long = 10_000): RabbitMqConn? {
+    fun createConnection(
+        props: RabbitMqConnProps,
+        executor: ExecutorService? = null,
+        initDelayMs: Long = 10_000
+    ): RabbitMqConn? {
 
         val host = props.host
 
@@ -31,6 +36,6 @@ class RabbitMqConnFactory {
             connectionFactory.port = port
         }
 
-        return RabbitMqConn(connectionFactory, initDelayMs, props.threadPoolSize)
+        return RabbitMqConn(connectionFactory, executor, initDelayMs)
     }
 }

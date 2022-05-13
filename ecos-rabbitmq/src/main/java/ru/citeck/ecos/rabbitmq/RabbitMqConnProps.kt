@@ -5,6 +5,5 @@ class RabbitMqConnProps(
     val username: String = "admin",
     val password: String = "admin",
     val virtualHost: String = "/",
-    val port: Int? = null,
-    val threadPoolSize: Int = 16
+    val port: Int? = null
 )

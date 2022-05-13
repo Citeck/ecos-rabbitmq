@@ -12,7 +12,7 @@
 
     <properties>
 
-        <revision>2.4.0</revision>
+        <revision>2.4.1</revision>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
@@ -30,7 +30,7 @@
         <kotlin.version>1.6.21</kotlin.version>
         <kotlin.logging.version>1.12.5</kotlin.logging.version>
 
-        <ecos.commons.version>2.6.2</ecos.commons.version>
+        <ecos.commons.version>2.6.7</ecos.commons.version>
 
     </properties>
 
