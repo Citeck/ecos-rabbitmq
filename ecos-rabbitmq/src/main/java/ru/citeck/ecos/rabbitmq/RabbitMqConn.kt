@@ -30,6 +30,15 @@ class RabbitMqConn @JvmOverloads constructor(
 
     private val executor = executor ?: Executors.newFixedThreadPool(16)
 
+    private val initializerEnabled = AtomicBoolean(true)
+    private val shutdownHook = Thread {
+        initializerEnabled.set(false)
+        if (!wasClosed) {
+            this.connection?.close()
+            wasClosed = true
+        }
+    }
+
     @Synchronized
     private fun init() {
         if (initStarted) {
@@ -46,18 +55,7 @@ class RabbitMqConn @JvmOverloads constructor(
 
     private fun initThreadImpl() {
 
-        val initializerEnabled = AtomicBoolean(true)
-
-        Runtime.getRuntime().addShutdownHook(
-            Thread {
-                log.info("Shutdown hook triggered")
-                initializerEnabled.set(false)
-                if (!wasClosed) {
-                    this.connection?.close()
-                }
-                log.info("Shutdown hook completed")
-            }
-        )
+        Runtime.getRuntime().addShutdownHook(shutdownHook)
 
         thread(start = true, isDaemon = false, name = "ECOS rabbit connection initializer") {
 
@@ -156,6 +154,7 @@ class RabbitMqConn @JvmOverloads constructor(
 
     fun close() {
         connection?.close()
+        Runtime.getRuntime().removeShutdownHook(shutdownHook)
         wasClosed = true
     }
 }
