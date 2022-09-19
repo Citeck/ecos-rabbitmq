@@ -1,6 +1,7 @@
 package ru.citeck.ecos.commons.rabbit
 
 import com.rabbitmq.client.ConnectionFactory
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import ru.citeck.ecos.rabbitmq.RabbitMqConn
 import java.time.Instant
@@ -8,6 +9,7 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
+@Disabled
 class RabbitMqComplexTest {
 
     @Test
