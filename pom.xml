@@ -31,6 +31,7 @@
         <kotlin.logging.version>1.12.5</kotlin.logging.version>
 
         <ecos.commons.version>2.8.6</ecos.commons.version>
+        <ecos.webapp-api.version>1.2.2</ecos.webapp-api.version>
 
     </properties>
 
@@ -47,6 +48,13 @@
             <groupId>ru.citeck.ecos.commons</groupId>
             <artifactId>ecos-commons</artifactId>
             <version>${ecos.commons.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>ru.citeck.ecos.webapp</groupId>
+            <artifactId>ecos-webapp-api</artifactId>
+            <version>${ecos.webapp-api.version}</version>
             <scope>provided</scope>
         </dependency>
 
