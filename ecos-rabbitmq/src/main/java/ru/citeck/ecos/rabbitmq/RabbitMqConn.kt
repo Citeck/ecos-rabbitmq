@@ -51,12 +51,10 @@ class RabbitMqConn @JvmOverloads constructor(
 
         Runtime.getRuntime().addShutdownHook(
             Thread {
-                log.info("Shutdown hook triggered")
                 initializerEnabled.set(false)
                 if (!wasClosed) {
                     this.connection?.close()
                 }
-                log.info("Shutdown hook completed")
             }
         )
 
@@ -139,7 +137,7 @@ class RabbitMqConn @JvmOverloads constructor(
         doWithConnection(
             Consumer {
                 val channel = it.createChannel()
-                channel.basicQos(qos)
+                channel.basicQos(qos, true)
                 action.accept(RabbitMqChannel(channel, connectionContext))
             }
         )

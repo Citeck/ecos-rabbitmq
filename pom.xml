@@ -7,10 +7,12 @@
 
     <groupId>ru.citeck.ecos.rabbitmq</groupId>
     <artifactId>ecos-rabbitmq-project</artifactId>
-    <version>2.3.2</version>
+    <version>${revision}</version>
     <packaging>pom</packaging>
 
     <properties>
+
+        <revision>2.3.3</revision>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
@@ -28,7 +30,7 @@
         <kotlin.version>1.5.21</kotlin.version>
         <kotlin.logging.version>1.12.5</kotlin.logging.version>
 
-        <ecos.commons.version>2.5.0</ecos.commons.version>
+        <ecos.commons.version>2.5.11</ecos.commons.version>
 
     </properties>
 
@@ -185,6 +187,32 @@
                         <id>attach-sources</id>
                         <goals>
                             <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>1.2.7</version>
+                <configuration>
+                    <updatePomFile>true</updatePomFile>
+                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten.clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
                         </goals>
                     </execution>
                 </executions>
