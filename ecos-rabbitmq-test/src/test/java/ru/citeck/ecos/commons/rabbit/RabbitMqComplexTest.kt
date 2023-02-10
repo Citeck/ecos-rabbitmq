@@ -1,31 +1,19 @@
 package ru.citeck.ecos.commons.rabbit
 
-import com.rabbitmq.client.ConnectionFactory
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
-import ru.citeck.ecos.rabbitmq.RabbitMqConn
+import ru.citeck.ecos.rabbitmq.test.EcosRabbitMqTest
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
-@Disabled
 class RabbitMqComplexTest {
 
     @Test
     fun test() {
 
-        val factoryClass: Class<out ConnectionFactory> = ConnectionFactory::class.java
-
-        val getConn: () -> RabbitMqConn = {
-            val factory = factoryClass.getDeclaredConstructor().newInstance()
-            factory.host = "localhost"
-            factory.username = "admin"
-            factory.password = "admin"
-            RabbitMqConn(factory)
-        }
-        val conn1 = getConn()
-        val conn2 = getConn()
+        val conn1 = EcosRabbitMqTest.createConnection()
+        val conn2 = EcosRabbitMqTest.createConnection()
 
         val messages = Collections.synchronizedList(mutableListOf<String>())
         val completed = AtomicBoolean()
@@ -78,7 +66,7 @@ class RabbitMqComplexTest {
 
         Thread.sleep(1000)
 
-        val conn3 = getConn()
+        val conn3 = EcosRabbitMqTest.createConnection()
         conn3.doWithNewChannel { channel ->
             for (i in 0 until messagesCount) {
                 channel.publishMsg("queue-1", "abc-$i")

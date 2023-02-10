@@ -1,13 +1,11 @@
 package ru.citeck.ecos.commons.rabbit
 
-import com.github.fridujo.rabbitmq.mock.MockConnectionFactory
 import com.rabbitmq.client.BuiltinExchangeType
-import com.rabbitmq.client.ConnectionFactory
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import ru.citeck.ecos.commons.utils.func.UncheckedBiConsumer
 import ru.citeck.ecos.rabbitmq.RabbitMqChannel
-import ru.citeck.ecos.rabbitmq.RabbitMqConn
+import ru.citeck.ecos.rabbitmq.test.EcosRabbitMqTest
 import java.util.function.Consumer
 import kotlin.test.assertEquals
 
@@ -16,8 +14,7 @@ class RabbitMqConnTest {
     @Test
     fun test() {
 
-        val factory: ConnectionFactory = MockConnectionFactory()
-        val connection = RabbitMqConn(factory)
+        val connection = EcosRabbitMqTest.getConnection()
 
         connection.waitUntilReady(5_000)
 
@@ -31,7 +28,6 @@ class RabbitMqConnTest {
             "test",
             Message::class.java,
             object : UncheckedBiConsumer<Message, Map<String, Any>> {
-
                 override fun accept(arg0: Message, arg1: Map<String, Any>) {
                     results.add(arg0)
                 }

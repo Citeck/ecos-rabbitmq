@@ -5,7 +5,7 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>ecos-rabbitmq</artifactId>
+    <artifactId>ecos-rabbitmq-test</artifactId>
 
     <parent>
         <groupId>ru.citeck.ecos.rabbitmq</groupId>
@@ -13,13 +13,28 @@
         <version>${revision}</version>
     </parent>
 
+    <properties>
+        <ecos-test-commons.version>1.0.0</ecos-test-commons.version>
+    </properties>
+
     <dependencies>
+
+        <dependency>
+            <groupId>ru.citeck.ecos.rabbitmq</groupId>
+            <artifactId>ecos-rabbitmq</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>com.rabbitmq</groupId>
             <artifactId>amqp-client</artifactId>
             <version>${amqp-client.version}</version>
-            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>ru.citeck.ecos.test.commons</groupId>
+            <artifactId>ecos-test-commons</artifactId>
+            <version>${ecos-test-commons.version}</version>
         </dependency>
 
     </dependencies>
@@ -36,6 +51,17 @@
             <plugin>
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-maven-plugin</artifactId>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
 
         </plugins>

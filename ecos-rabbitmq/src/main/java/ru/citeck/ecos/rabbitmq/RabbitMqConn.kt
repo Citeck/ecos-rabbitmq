@@ -5,8 +5,10 @@ import com.rabbitmq.client.ConnectionFactory
 import mu.KotlinLogging
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
 import kotlin.concurrent.thread
+import kotlin.math.min
 
 class RabbitMqConn @JvmOverloads constructor(
     private val connectionFactory: ConnectionFactory,
@@ -34,7 +36,9 @@ class RabbitMqConn @JvmOverloads constructor(
     private val shutdownHook = Thread {
         initializerEnabled.set(false)
         if (!wasClosed) {
-            this.connection?.close()
+            if (this.connection?.isOpen == true) {
+                this.connection?.close()
+            }
             wasClosed = true
         }
     }
@@ -54,6 +58,8 @@ class RabbitMqConn @JvmOverloads constructor(
     }
 
     private fun initThreadImpl() {
+
+        val connectionFailuresCount = AtomicInteger(0)
 
         Runtime.getRuntime().addShutdownHook(shutdownHook)
 
@@ -98,9 +104,12 @@ class RabbitMqConn @JvmOverloads constructor(
 
                     break
                 } catch (e: Exception) {
+                    connectionFailuresCount.incrementAndGet()
                     try {
                         this.connection = null
-                        connection?.close()
+                        if (connection?.isOpen == true) {
+                            connection.close()
+                        }
                     } catch (e: Exception) {
                         log.error(e) { "Error while connection closing" }
                     }
@@ -109,15 +118,24 @@ class RabbitMqConn @JvmOverloads constructor(
                         tryWithoutLogErrorStartTime = System.currentTimeMillis()
                         log.error(e) { msg }
                     } else {
+                        var mostSpecificMsg = e.message
                         var ex: Throwable
                         var cause: Throwable? = e
                         while (cause != null) {
                             ex = cause
+                            if (!cause.message.isNullOrBlank()) {
+                                mostSpecificMsg = cause.message
+                            }
                             cause = ex.cause
                         }
-                        log.error(msg + ": '" + e.message + "'")
+                        log.error("$msg: '$mostSpecificMsg'")
                     }
-                    Thread.sleep(20_000)
+                    Thread.sleep(
+                        min(
+                            2000L * (connectionFailuresCount.get() + 1),
+                            20_000L
+                        )
+                    )
                 }
             }
         }
@@ -153,7 +171,9 @@ class RabbitMqConn @JvmOverloads constructor(
     }
 
     fun close() {
-        connection?.close()
+        if (connection?.isOpen == true) {
+            connection?.close()
+        }
         Runtime.getRuntime().removeShutdownHook(shutdownHook)
         wasClosed = true
     }

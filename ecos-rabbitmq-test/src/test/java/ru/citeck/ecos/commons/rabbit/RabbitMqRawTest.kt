@@ -1,19 +1,16 @@
 package ru.citeck.ecos.commons.rabbit
 
-import com.github.fridujo.rabbitmq.mock.MockConnectionFactory
-import com.rabbitmq.client.ConnectionFactory
 import com.rabbitmq.client.Delivery
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import ru.citeck.ecos.rabbitmq.RabbitMqConn
+import ru.citeck.ecos.rabbitmq.test.EcosRabbitMqTest
 
 class RabbitMqRawTest {
 
     @Test
     fun test() {
 
-        val factory: ConnectionFactory = MockConnectionFactory()
-        val connection = RabbitMqConn(factory)
+        val connection = EcosRabbitMqTest.getConnection()
 
         connection.waitUntilReady(5_000)
 
