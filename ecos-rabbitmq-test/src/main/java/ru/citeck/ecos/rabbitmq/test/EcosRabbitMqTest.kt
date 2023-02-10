@@ -30,6 +30,7 @@ object EcosRabbitMqTest {
         }
         EcosTestExecutionListener.doWhenExecutionFinished { _, _ -> closeImpl() }
         container.doBeforeStop(closeImpl)
+        nnConnection.waitUntilReady(100_000)
         return nnConnection
     }
 
