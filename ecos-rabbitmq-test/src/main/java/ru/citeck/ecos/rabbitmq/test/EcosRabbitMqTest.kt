@@ -28,9 +28,6 @@ object EcosRabbitMqTest {
     fun getConnection(): RabbitMqConn {
         val connection = this.connection
         if (connection == null) {
-            val container = TestContainers.getRabbitMq()
-            val factory = ConnectionFactory()
-            factory.setUri(container.getConnectionString())
             val nnConnection = createConnection { this.connection = null }
             this.connection = nnConnection
             return nnConnection
