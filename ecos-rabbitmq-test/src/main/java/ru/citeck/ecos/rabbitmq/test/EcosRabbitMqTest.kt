@@ -5,12 +5,12 @@ import ru.citeck.ecos.rabbitmq.RabbitMqConn
 import ru.citeck.ecos.test.commons.containers.TestContainers
 import ru.citeck.ecos.test.commons.containers.container.rabbitmq.RabbitMqContainer
 import ru.citeck.ecos.test.commons.listener.EcosTestExecutionListener
-import java.util.IdentityHashMap
+import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
 object EcosRabbitMqTest {
 
-    private var connection = IdentityHashMap<Thread, RabbitMqConn>()
+    private var connection = Collections.synchronizedMap(IdentityHashMap<Thread, RabbitMqConn>())
 
     fun createConnection(): RabbitMqConn {
         return createConnection {}
