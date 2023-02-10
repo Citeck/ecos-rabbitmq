@@ -28,18 +28,18 @@ class RabbitMqConn @JvmOverloads constructor(
     private val postInitActions = ConcurrentLinkedQueue<Consumer<Connection>>()
     private val connectionContext = RabbitMqConnCtx()
 
-    private var wasClosed = false
+    private var wasClosed = AtomicBoolean(false)
 
     private val executor = executor ?: Executors.newFixedThreadPool(16)
 
     private val initializerEnabled = AtomicBoolean(true)
     private val shutdownHook = Thread {
         initializerEnabled.set(false)
-        if (!wasClosed) {
+        if (!wasClosed.get()) {
             if (this.connection?.isOpen == true) {
                 this.connection?.close()
             }
-            wasClosed = true
+            wasClosed.set(true)
         }
     }
 
@@ -171,10 +171,16 @@ class RabbitMqConn @JvmOverloads constructor(
     }
 
     fun close() {
-        if (connection?.isOpen == true) {
-            connection?.close()
+        if (!wasClosed.get()) {
+            if (connection?.isOpen == true) {
+                connection?.close()
+            }
+            Runtime.getRuntime().removeShutdownHook(shutdownHook)
+            wasClosed.set(true)
         }
-        Runtime.getRuntime().removeShutdownHook(shutdownHook)
-        wasClosed = true
+    }
+
+    fun isClosed(): Boolean {
+        return wasClosed.get()
     }
 }
