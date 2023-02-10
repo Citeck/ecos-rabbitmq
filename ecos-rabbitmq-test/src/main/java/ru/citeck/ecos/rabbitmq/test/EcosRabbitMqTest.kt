@@ -5,11 +5,12 @@ import ru.citeck.ecos.rabbitmq.RabbitMqConn
 import ru.citeck.ecos.test.commons.containers.TestContainers
 import ru.citeck.ecos.test.commons.containers.container.rabbitmq.RabbitMqContainer
 import ru.citeck.ecos.test.commons.listener.EcosTestExecutionListener
+import java.util.IdentityHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
 object EcosRabbitMqTest {
 
-    private var connection = ThreadLocal<RabbitMqConn>()
+    private var connection = IdentityHashMap<Thread, RabbitMqConn>()
 
     fun createConnection(): RabbitMqConn {
         return createConnection {}
@@ -37,10 +38,11 @@ object EcosRabbitMqTest {
     }
 
     fun getConnection(): RabbitMqConn {
-        val connection = this.connection.get()
+        val thread = Thread.currentThread()
+        val connection = this.connection[thread]
         if (connection == null) {
-            val nnConnection = createConnection { this.connection.remove() }
-            this.connection.set(nnConnection)
+            val nnConnection = createConnection { this.connection.remove(thread) }
+            this.connection[thread] = nnConnection
             return nnConnection
         }
         return connection
