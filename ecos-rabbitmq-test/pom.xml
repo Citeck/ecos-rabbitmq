@@ -14,7 +14,7 @@
     </parent>
 
     <properties>
-        <ecos-test-commons.version>1.0.1</ecos-test-commons.version>
+        <ecos-test-commons.version>1.0.4</ecos-test-commons.version>
     </properties>
 
     <dependencies>

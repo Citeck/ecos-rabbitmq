@@ -12,11 +12,15 @@ object EcosRabbitMqTest {
 
     private var connection = Collections.synchronizedMap(IdentityHashMap<Thread, RabbitMqConn>())
 
-    fun createConnection(): RabbitMqConn {
-        return createConnection {}
+    @JvmStatic
+    @JvmOverloads
+    fun createConnection(closeAfterTest: Boolean = true): RabbitMqConn {
+        return createConnection(closeAfterTest) {}
     }
 
-    fun createConnection(beforeClosed: () -> Unit): RabbitMqConn {
+    @JvmStatic
+    @JvmOverloads
+    fun createConnection(closeAfterTest: Boolean = true, beforeClosed: () -> Unit): RabbitMqConn {
         val container = getContainer()
         val factory = ConnectionFactory()
         factory.setUri(container.getConnectionString())
@@ -28,7 +32,9 @@ object EcosRabbitMqTest {
                 nnConnection.close()
             }
         }
-        EcosTestExecutionListener.doWhenExecutionFinished { _, _ -> closeImpl() }
+        if (closeAfterTest) {
+            EcosTestExecutionListener.doWhenExecutionFinished { _, _ -> closeImpl() }
+        }
         container.doBeforeStop(closeImpl)
         nnConnection.waitUntilReady(100_000)
         return nnConnection
@@ -38,11 +44,12 @@ object EcosRabbitMqTest {
         return TestContainers.getRabbitMq()
     }
 
+    @Synchronized
     fun getConnection(): RabbitMqConn {
         val thread = Thread.currentThread()
         val connection = this.connection[thread]
         if (connection == null) {
-            val nnConnection = createConnection { this.connection.remove(thread) }
+            val nnConnection = createConnection(false) { this.connection.remove(thread) }
             this.connection[thread] = nnConnection
             return nnConnection
         }
