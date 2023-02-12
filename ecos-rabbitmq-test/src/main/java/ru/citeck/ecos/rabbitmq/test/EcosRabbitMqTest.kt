@@ -44,6 +44,7 @@ object EcosRabbitMqTest {
         return TestContainers.getRabbitMq()
     }
 
+    @JvmStatic
     @Synchronized
     fun getConnection(): RabbitMqConn {
         val thread = Thread.currentThread()
