@@ -10,18 +10,29 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 object EcosRabbitMqTest {
 
-    private var connection = Collections.synchronizedMap(IdentityHashMap<Thread, RabbitMqConn>())
+    private var connection = Collections.synchronizedMap(LinkedHashMap<Pair<Any, Thread>, RabbitMqConn>())
+
+    @JvmStatic
+    fun createConnection(): RabbitMqConn {
+        return createConnection("", true) {}
+    }
 
     @JvmStatic
     @JvmOverloads
-    fun createConnection(closeAfterTest: Boolean = true): RabbitMqConn {
-        return createConnection(closeAfterTest) {}
+    fun createConnection(key: Any, closeAfterTest: Boolean = true): RabbitMqConn {
+        return createConnection(key, closeAfterTest) {}
     }
 
     @JvmStatic
     @JvmOverloads
     fun createConnection(closeAfterTest: Boolean = true, beforeClosed: () -> Unit): RabbitMqConn {
-        val container = getContainer()
+        return createConnection("", closeAfterTest, beforeClosed)
+    }
+
+    @JvmStatic
+    @JvmOverloads
+    fun createConnection(key: Any, closeAfterTest: Boolean = true, beforeClosed: () -> Unit): RabbitMqConn {
+        val container = getContainer(key)
         val factory = ConnectionFactory()
         factory.setUri(container.getConnectionString())
         val nnConnection = RabbitMqConn(factory)
@@ -40,18 +51,22 @@ object EcosRabbitMqTest {
         return nnConnection
     }
 
-    fun getContainer(): RabbitMqContainer {
-        return TestContainers.getRabbitMq()
+    @JvmStatic
+    @JvmOverloads
+    fun getContainer(key: Any = ""): RabbitMqContainer {
+        return TestContainers.getRabbitMq(key)
     }
 
     @JvmStatic
+    @JvmOverloads
     @Synchronized
-    fun getConnection(): RabbitMqConn {
+    fun getConnection(key: Any = ""): RabbitMqConn {
         val thread = Thread.currentThread()
-        val connection = this.connection[thread]
+        val connKey = key to thread
+        val connection = this.connection[connKey]
         if (connection == null) {
-            val nnConnection = createConnection(false) { this.connection.remove(thread) }
-            this.connection[thread] = nnConnection
+            val nnConnection = createConnection(true) { this.connection.remove(connKey) }
+            this.connection[connKey] = nnConnection
             return nnConnection
         }
         return connection
