@@ -11,6 +11,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 object EcosRabbitMqTest {
 
     private var connection = Collections.synchronizedMap(LinkedHashMap<Pair<Any, Thread>, RabbitMqConn>())
+    private var containerByConn = Collections.synchronizedMap(IdentityHashMap<RabbitMqConn, RabbitMqContainer>())
+    private val mainContainerReserved = AtomicBoolean()
 
     @JvmStatic
     fun createConnection(): RabbitMqConn {
@@ -32,15 +34,18 @@ object EcosRabbitMqTest {
     @JvmStatic
     @JvmOverloads
     fun createConnection(key: Any, closeAfterTest: Boolean = true, beforeClosed: () -> Unit): RabbitMqConn {
-        val container = getContainer(key)
+        val container = TestContainers.getRabbitMq(key)
         val factory = ConnectionFactory()
         factory.setUri(container.getConnectionString())
         val nnConnection = RabbitMqConn(factory)
+        containerByConn[nnConnection] = container
         val wasClosed = AtomicBoolean(false)
         val closeImpl = {
             if (wasClosed.compareAndSet(false, true)) {
                 beforeClosed.invoke()
                 nnConnection.close()
+                container.release()
+                containerByConn.remove(nnConnection)
             }
         }
         if (closeAfterTest) {
@@ -52,9 +57,8 @@ object EcosRabbitMqTest {
     }
 
     @JvmStatic
-    @JvmOverloads
-    fun getContainer(key: Any = ""): RabbitMqContainer {
-        return TestContainers.getRabbitMq(key)
+    fun getContainer(connection: RabbitMqConn): RabbitMqContainer? {
+        return containerByConn[connection]
     }
 
     @JvmStatic
@@ -66,6 +70,11 @@ object EcosRabbitMqTest {
         val connection = this.connection[connKey]
         if (connection == null) {
             val nnConnection = createConnection(true) { this.connection.remove(connKey) }
+            if (key == "" && mainContainerReserved.compareAndSet(false, true)) {
+                val container = containerByConn[nnConnection]!!
+                container.reserve()
+                EcosTestExecutionListener.doWhenTestPlanExecutionFinished { container.release() }
+            }
             this.connection[connKey] = nnConnection
             return nnConnection
         }
