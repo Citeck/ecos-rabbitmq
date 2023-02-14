@@ -34,24 +34,28 @@ object EcosRabbitMqTest {
     @JvmStatic
     @JvmOverloads
     fun createConnection(key: Any, closeAfterTest: Boolean = true, beforeClosed: () -> Unit): RabbitMqConn {
-        val container = TestContainers.getRabbitMq(key)
+        val container = TestContainers.getRabbitMq(key) {
+            releaseAfterTest(false)
+        }
         val factory = ConnectionFactory()
         factory.setUri(container.getConnectionString())
         val nnConnection = RabbitMqConn(factory)
         containerByConn[nnConnection] = container
         val wasClosed = AtomicBoolean(false)
-        val closeImpl = {
+        val closeImpl: (Boolean) -> Unit = { fromContainer ->
             if (wasClosed.compareAndSet(false, true)) {
                 beforeClosed.invoke()
                 nnConnection.close()
-                container.release()
+                if (!fromContainer) {
+                    container.release()
+                }
                 containerByConn.remove(nnConnection)
             }
         }
         if (closeAfterTest) {
-            EcosTestExecutionListener.doWhenExecutionFinished { _, _ -> closeImpl() }
+            EcosTestExecutionListener.doWhenExecutionFinished { _, _ -> closeImpl(false) }
         }
-        container.doBeforeStop(closeImpl)
+        container.doBeforeStop { closeImpl(true) }
         nnConnection.waitUntilReady(100_000)
         return nnConnection
     }
