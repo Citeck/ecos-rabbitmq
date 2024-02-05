@@ -1,24 +1,31 @@
 package ru.citeck.ecos.rabbitmq
 
-import com.rabbitmq.client.AMQP
-import com.rabbitmq.client.BuiltinExchangeType
-import com.rabbitmq.client.Channel
-import com.rabbitmq.client.Delivery
+import com.rabbitmq.client.*
+import io.micrometer.observation.Observation
 import mu.KotlinLogging
+import ru.citeck.ecos.commons.json.Json
 import ru.citeck.ecos.commons.utils.NameUtils
 import ru.citeck.ecos.commons.utils.func.UncheckedBiConsumer
+import ru.citeck.ecos.micrometer.EcosMicrometerContext
+import ru.citeck.ecos.micrometer.observeKt
 import ru.citeck.ecos.rabbitmq.ack.AckedMessage
 import ru.citeck.ecos.rabbitmq.ack.AckedMessageImpl
+import java.io.InputStream
 
 class RabbitMqChannel(
     private val channel: Channel,
-    private val context: RabbitMqConnCtx
+    private val context: RabbitMqConnCtx,
+    private val micrometerContext: EcosMicrometerContext
 ) {
 
     companion object {
         val log = KotlinLogging.logger {}
         const val PARSING_ERRORS_QUEUE = "ecos.msg.parsing-errors.queue"
+
+        private const val HEADER_MM_SCOPE = "ECOS-RMQ-Micrometer-Scope"
         val nameEscaper = NameUtils.getEscaperWithAllowedChars(".-:")
+
+        private val strStrMapType = Json.mapper.getMapType(String::class.java, String::class.java)
     }
 
     init {
@@ -100,9 +107,10 @@ class RabbitMqChannel(
         msgType: Class<out T>,
         crossinline action: (T, Map<String, Any>, Delivery) -> Unit
     ): String {
+        val escapedQueueName = nameEscaper.escape(queue)
 
         return channel.basicConsume(
-            nameEscaper.escape(queue),
+            escapedQueueName,
             autoAck,
             { _, message: Delivery ->
                 run {
@@ -116,12 +124,44 @@ class RabbitMqChannel(
                         publishMsg(PARSING_ERRORS_QUEUE, ParsingError(message))
                     } else {
                         val headers = message.properties.headers ?: emptyMap()
-                        action.invoke(body, headers, message)
+                        if (micrometerContext.isNoop()) {
+                            action.invoke(body, headers, message)
+                        } else {
+                            val mmScope = parseStringStringMapHeader(headers[HEADER_MM_SCOPE])
+                            micrometerContext.doWithinExtScope(mmScope) {
+
+                                val observation = Observation.createNotStarted(
+                                    "ecos.rabbitmq.consume",
+                                    micrometerContext.getObservationRegistry()
+                                ).lowCardinalityKeyValue("queue", escapedQueueName)
+
+                                observation.observeKt {
+                                    action.invoke(body, headers, message)
+                                }
+                            }
+                        }
                     }
                 }
             },
             { consumerTag: String -> log.info("Consuming cancelled. Tag: $consumerTag") }
         )
+    }
+
+    private fun parseStringStringMapHeader(header: Any?): Map<String, String> {
+        if (header == null) {
+            return emptyMap()
+        }
+        return if (header is String && header.isNotBlank()) {
+            Json.mapper.readNotNull(header, strStrMapType)
+        } else if (header is LongString) {
+            Json.mapper.readNotNull(header.stream, strStrMapType)
+        } else if (header is InputStream) {
+            Json.mapper.readNotNull(header, strStrMapType)
+        } else if (header is ByteArray) {
+            Json.mapper.readNotNull(header, strStrMapType)
+        } else {
+            emptyMap()
+        }
     }
 
     @JvmOverloads
@@ -150,11 +190,35 @@ class RabbitMqChannel(
             context.toMsgBodyBytes(message)
         }
 
-        val props = AMQP.BasicProperties.Builder().headers(headers)
-        if (ttl > 0) {
-            props.expiration(ttl.toString())
+        val observation = if (micrometerContext.isNoop()) {
+            Observation.NOOP
+        } else {
+            Observation.createNotStarted(
+                "ecos.rabbitmq.publish",
+                micrometerContext.getObservationRegistry()
+            ).lowCardinalityKeyValue("exchange", exchange)
+                .highCardinalityKeyValue("routingKey", routingKey)
+                .highCardinalityKeyValue("ttl", ttl.toString())
         }
-        channel.basicPublish(nameEscaper.escape(exchange), routingKey, props.build(), body)
+
+        observation.observeKt {
+
+            val mmScopeData = micrometerContext.extractScopeData()
+            val msgHeaders = if (mmScopeData.isEmpty()) {
+                headers
+            } else {
+                val fullHeaders = LinkedHashMap(headers)
+                fullHeaders[HEADER_MM_SCOPE] = Json.mapper.toStringNotNull(mmScopeData)
+                fullHeaders
+            }
+
+            val props = AMQP.BasicProperties.Builder().headers(msgHeaders)
+            if (ttl > 0) {
+                props.expiration(ttl.toString())
+            }
+
+            channel.basicPublish(nameEscaper.escape(exchange), routingKey, props.build(), body)
+        }
     }
 
     fun declareQueue(queue: String, durable: Boolean) {

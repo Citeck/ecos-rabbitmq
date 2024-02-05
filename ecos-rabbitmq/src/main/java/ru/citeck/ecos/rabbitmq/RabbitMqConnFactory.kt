@@ -2,12 +2,19 @@ package ru.citeck.ecos.rabbitmq
 
 import com.rabbitmq.client.ConnectionFactory
 import mu.KotlinLogging
+import ru.citeck.ecos.micrometer.EcosMicrometerContext
 import java.util.concurrent.ExecutorService
 
 class RabbitMqConnFactory {
 
     companion object {
         val log = KotlinLogging.logger {}
+    }
+
+    private var micrometerContext: EcosMicrometerContext = EcosMicrometerContext.NOOP
+
+    fun init(micrometerContext: EcosMicrometerContext = EcosMicrometerContext.NOOP) {
+        this.micrometerContext = micrometerContext
     }
 
     @JvmOverloads
@@ -36,6 +43,6 @@ class RabbitMqConnFactory {
             connectionFactory.port = port
         }
 
-        return RabbitMqConn(connectionFactory, executor, initDelayMs)
+        return RabbitMqConn(connectionFactory, executor, initDelayMs, micrometerContext)
     }
 }
