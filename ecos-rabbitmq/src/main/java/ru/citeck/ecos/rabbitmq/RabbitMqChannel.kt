@@ -1,13 +1,11 @@
 package ru.citeck.ecos.rabbitmq
 
 import com.rabbitmq.client.*
-import io.micrometer.observation.Observation
 import mu.KotlinLogging
 import ru.citeck.ecos.commons.json.Json
 import ru.citeck.ecos.commons.utils.NameUtils
 import ru.citeck.ecos.commons.utils.func.UncheckedBiConsumer
 import ru.citeck.ecos.micrometer.EcosMicrometerContext
-import ru.citeck.ecos.micrometer.observeKt
 import ru.citeck.ecos.rabbitmq.ack.AckedMessage
 import ru.citeck.ecos.rabbitmq.ack.AckedMessageImpl
 import java.io.InputStream
@@ -130,12 +128,11 @@ class RabbitMqChannel(
                             val mmScope = parseStringStringMapHeader(headers[HEADER_MM_SCOPE])
                             micrometerContext.doWithinExtScope(mmScope) {
 
-                                val observation = Observation.createNotStarted(
-                                    "ecos.rabbitmq.consume",
-                                    micrometerContext.getObservationRegistry()
+                                val observation = micrometerContext.createObservation(
+                                    "ecos.rabbitmq.consume"
                                 ).lowCardinalityKeyValue("queue", escapedQueueName)
 
-                                observation.observeKt {
+                                observation.observe {
                                     action.invoke(body, headers, message)
                                 }
                             }
@@ -190,18 +187,12 @@ class RabbitMqChannel(
             context.toMsgBodyBytes(message)
         }
 
-        val observation = if (micrometerContext.isNoop()) {
-            Observation.NOOP
-        } else {
-            Observation.createNotStarted(
-                "ecos.rabbitmq.publish",
-                micrometerContext.getObservationRegistry()
-            ).lowCardinalityKeyValue("exchange", exchange)
-                .highCardinalityKeyValue("routingKey", routingKey)
-                .highCardinalityKeyValue("ttl", ttl.toString())
-        }
+        val observation = micrometerContext.createObservation("ecos.rabbitmq.publish")
+            .lowCardinalityKeyValue("exchange", exchange)
+            .highCardinalityKeyValue("routingKey", routingKey)
+            .highCardinalityKeyValue("ttl") { ttl.toString() }
 
-        observation.observeKt {
+        observation.observe {
 
             val mmScopeData = micrometerContext.extractScopeData()
             val msgHeaders = if (mmScopeData.isEmpty()) {
