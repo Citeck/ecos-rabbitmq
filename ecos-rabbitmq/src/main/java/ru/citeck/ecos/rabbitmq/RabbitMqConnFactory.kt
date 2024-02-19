@@ -66,10 +66,10 @@ class RabbitMqConnFactory {
 
                 val keyStore = KeyStore.getInstance(KeyStore.getDefaultType())
                 keyStore.load(null, null)
-                keyStore.setKeyEntry("key", clientKeyCert.key, null, arrayOf(clientKeyCert.cert))
+                keyStore.setKeyEntry("key", clientKeyCert.key, "".toCharArray(), arrayOf(clientKeyCert.cert))
 
                 val kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-                kmf.init(keyStore, null)
+                kmf.init(keyStore, "".toCharArray())
                 keyManagers = kmf.keyManagers
             }
 
