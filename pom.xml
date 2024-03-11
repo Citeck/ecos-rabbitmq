@@ -12,7 +12,7 @@
 
     <properties>
 
-        <revision>2.6.0</revision>
+        <revision>2.7.0</revision>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
@@ -30,7 +30,7 @@
 
         <amqp-client.version>5.4.3</amqp-client.version>
 
-        <ecos.micrometer.version>1.1.0</ecos.micrometer.version>
+        <ecos.micrometer.version>1.2.0</ecos.micrometer.version>
 
     </properties>
 

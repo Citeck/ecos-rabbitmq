@@ -8,6 +8,8 @@ import ru.citeck.ecos.commons.utils.func.UncheckedBiConsumer
 import ru.citeck.ecos.micrometer.EcosMicrometerContext
 import ru.citeck.ecos.rabbitmq.ack.AckedMessage
 import ru.citeck.ecos.rabbitmq.ack.AckedMessageImpl
+import ru.citeck.ecos.rabbitmq.obs.RmqConsumeObsContext
+import ru.citeck.ecos.rabbitmq.obs.RmqPublishObsContext
 import java.io.InputStream
 
 class RabbitMqChannel(
@@ -122,19 +124,17 @@ class RabbitMqChannel(
                         publishMsg(PARSING_ERRORS_QUEUE, ParsingError(message))
                     } else {
                         val headers = message.properties.headers ?: emptyMap()
-                        if (micrometerContext.isNoop()) {
-                            action.invoke(body, headers, message)
-                        } else {
-                            val mmScope = parseStringStringMapHeader(headers[HEADER_MM_SCOPE])
-                            micrometerContext.doWithinExtScope(mmScope) {
-
-                                val observation = micrometerContext.createObservation(
-                                    "ecos.rabbitmq.consume"
-                                ).lowCardinalityKeyValue("queue", escapedQueueName)
-
-                                observation.observe {
-                                    action.invoke(body, headers, message)
-                                }
+                        val mmScope = parseStringStringMapHeader(headers[HEADER_MM_SCOPE])
+                        micrometerContext.doWithinExtScope(mmScope) {
+                            micrometerContext.createObs(
+                                RmqConsumeObsContext(
+                                    escapedQueueName,
+                                    autoAck,
+                                    msgType,
+                                    this
+                                )
+                            ).observe {
+                                action.invoke(body, headers, message)
                             }
                         }
                     }
@@ -187,12 +187,16 @@ class RabbitMqChannel(
             context.toMsgBodyBytes(message)
         }
 
-        val observation = micrometerContext.createObservation("ecos.rabbitmq.publish")
-            .lowCardinalityKeyValue("exchange", exchange)
-            .highCardinalityKeyValue("routingKey", routingKey)
-            .highCardinalityKeyValue("ttl") { ttl.toString() }
-
-        observation.observe {
+        micrometerContext.createObs(
+            RmqPublishObsContext(
+                exchange,
+                routingKey,
+                message,
+                headers,
+                ttl,
+                this
+            )
+        ).observe {
 
             val mmScopeData = micrometerContext.extractScopeData()
             val msgHeaders = if (mmScopeData.isEmpty()) {
