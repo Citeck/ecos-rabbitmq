@@ -4,6 +4,7 @@ import com.rabbitmq.client.Connection
 import com.rabbitmq.client.ConnectionFactory
 import mu.KotlinLogging
 import ru.citeck.ecos.micrometer.EcosMicrometerContext
+import ru.citeck.ecos.rabbitmq.ds.RabbitMqConnection
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -13,13 +14,14 @@ import kotlin.math.min
 
 class RabbitMqConn @JvmOverloads constructor(
     private val connectionFactory: ConnectionFactory,
+    private val props: RabbitMqConnProps,
     executor: ExecutorService? = null,
     private val initSleepMs: Long = 0L,
     private val micrometerContext: EcosMicrometerContext = EcosMicrometerContext.NOOP
-) {
+) : RabbitMqConnection {
 
     companion object {
-        val log = KotlinLogging.logger {}
+        private val log = KotlinLogging.logger {}
     }
 
     @Volatile
@@ -115,7 +117,7 @@ class RabbitMqConn @JvmOverloads constructor(
                     } catch (e: Exception) {
                         log.error(e) { "Error while connection closing" }
                     }
-                    val msg = "Cannot configure connection to RabbitMQ"
+                    val msg = "Cannot configure connection to RabbitMQ ${props.host}:${props.port}:${props.virtualHost}"
                     if (System.currentTimeMillis() - tryWithoutLogErrorStartTime > 120_000) {
                         tryWithoutLogErrorStartTime = System.currentTimeMillis()
                         log.error(e) { msg }
@@ -143,16 +145,16 @@ class RabbitMqConn @JvmOverloads constructor(
         }
     }
 
-    fun waitUntilReady(timeoutMs: Long) {
+    override fun waitUntilReady(timeoutMs: Long) {
         init()
         initFuture.get(timeoutMs, TimeUnit.MILLISECONDS)
     }
 
-    fun doWithNewChannel(action: Consumer<RabbitMqChannel>) {
+    override fun doWithNewChannel(action: Consumer<RabbitMqChannel>) {
         doWithNewChannel(1, action)
     }
 
-    fun doWithNewChannel(qos: Int, action: Consumer<RabbitMqChannel>) {
+    override fun doWithNewChannel(qos: Int, action: Consumer<RabbitMqChannel>) {
         doWithConnection(
             Consumer {
                 val channel = it.createChannel()
@@ -162,7 +164,7 @@ class RabbitMqConn @JvmOverloads constructor(
         )
     }
 
-    fun doWithConnection(action: Consumer<Connection>) {
+    override fun doWithConnection(action: Consumer<Connection>) {
         val connection = this.connection
         if (connection != null) {
             action.accept(connection)
