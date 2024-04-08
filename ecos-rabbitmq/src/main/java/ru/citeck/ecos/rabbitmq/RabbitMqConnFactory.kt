@@ -101,6 +101,6 @@ class RabbitMqConnFactory {
             }
         }
 
-        return RabbitMqConn(connectionFactory, executor, initDelayMs, micrometerContext)
+        return RabbitMqConn(connectionFactory, props, executor, initDelayMs, micrometerContext)
     }
 }

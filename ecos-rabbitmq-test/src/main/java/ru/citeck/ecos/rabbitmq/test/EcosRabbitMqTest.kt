@@ -2,6 +2,7 @@ package ru.citeck.ecos.rabbitmq.test
 
 import com.rabbitmq.client.ConnectionFactory
 import ru.citeck.ecos.rabbitmq.RabbitMqConn
+import ru.citeck.ecos.rabbitmq.RabbitMqConnProps
 import ru.citeck.ecos.test.commons.containers.TestContainers
 import ru.citeck.ecos.test.commons.containers.container.rabbitmq.RabbitMqContainer
 import ru.citeck.ecos.test.commons.listener.EcosTestExecutionListener
@@ -39,7 +40,7 @@ object EcosRabbitMqTest {
         }
         val factory = ConnectionFactory()
         factory.setUri(container.getConnectionString())
-        val nnConnection = RabbitMqConn(factory)
+        val nnConnection = RabbitMqConn(factory, RabbitMqConnProps())
         containerByConn[nnConnection] = container
         val wasClosed = AtomicBoolean(false)
         val closeImpl: (Boolean) -> Unit = { fromContainer ->
