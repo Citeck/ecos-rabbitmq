@@ -5,8 +5,8 @@ import mu.KotlinLogging
 import ru.citeck.ecos.commons.x509.EcosX509Registry
 import ru.citeck.ecos.commons.x509.EmptyX509Registry
 import ru.citeck.ecos.micrometer.EcosMicrometerContext
+import ru.citeck.ecos.webapp.api.task.EcosTasksApi
 import java.security.KeyStore
-import java.util.concurrent.ExecutorService
 import javax.net.ssl.*
 
 class RabbitMqConnFactory {
@@ -15,14 +15,17 @@ class RabbitMqConnFactory {
         val log = KotlinLogging.logger {}
     }
 
+    private lateinit var tasksApi: EcosTasksApi
     private var micrometerContext: EcosMicrometerContext = EcosMicrometerContext.NOOP
     private var x509Registry: EcosX509Registry = EmptyX509Registry
 
     @JvmOverloads
     fun init(
+        tasksApi: EcosTasksApi,
         micrometerContext: EcosMicrometerContext = EcosMicrometerContext.NOOP,
         x509Registry: EcosX509Registry = EmptyX509Registry
     ) {
+        this.tasksApi = tasksApi
         this.micrometerContext = micrometerContext
         this.x509Registry = x509Registry
     }
@@ -30,7 +33,6 @@ class RabbitMqConnFactory {
     @JvmOverloads
     fun createConnection(
         props: RabbitMqConnProps,
-        executor: ExecutorService? = null,
         initDelayMs: Long = 10_000
     ): RabbitMqConn? {
 
@@ -99,6 +101,12 @@ class RabbitMqConnFactory {
             if (tlsProps.verifyHostname != false) {
                 connectionFactory.enableHostnameVerification()
             }
+        }
+
+        val executor = if (props.executor.isNotBlank()) {
+            tasksApi.getExecutor(props.executor).getAsJavaExecutor()
+        } else {
+            null
         }
 
         return RabbitMqConn(connectionFactory, props, executor, initDelayMs, micrometerContext)
