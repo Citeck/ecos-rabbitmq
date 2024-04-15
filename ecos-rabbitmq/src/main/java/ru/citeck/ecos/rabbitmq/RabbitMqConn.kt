@@ -8,6 +8,7 @@ import ru.citeck.ecos.rabbitmq.ds.RabbitMqConnection
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Consumer
 import kotlin.concurrent.thread
 import kotlin.math.min
@@ -24,15 +25,13 @@ class RabbitMqConn @JvmOverloads constructor(
         private val log = KotlinLogging.logger {}
     }
 
-    @Volatile
-    private var initStarted = false
-
-    private var connection: Connection? = null
+    private val initStarted = AtomicBoolean()
+    private val connection = AtomicReference<Connection>()
     private val initFuture = CompletableFuture<Boolean>()
     private val postInitActions = ConcurrentLinkedQueue<Consumer<Connection>>()
     private val connectionContext = RabbitMqConnCtx()
 
-    private var wasClosed = AtomicBoolean(false)
+    private val wasClosed = AtomicBoolean(false)
 
     private val executor = executor ?: Executors.newFixedThreadPool(16)
 
@@ -40,8 +39,8 @@ class RabbitMqConn @JvmOverloads constructor(
     private val shutdownHook = Thread {
         initializerEnabled.set(false)
         if (!wasClosed.get()) {
-            if (this.connection?.isOpen == true) {
-                this.connection?.close()
+            if (this.connection.get()?.isOpen == true) {
+                this.connection.get()?.close()
             }
             wasClosed.set(true)
         }
@@ -49,14 +48,13 @@ class RabbitMqConn @JvmOverloads constructor(
 
     @Synchronized
     private fun init() {
-        if (initStarted) {
+        if (!initStarted.compareAndSet(false, true)) {
             return
         }
-        initStarted = true
         try {
             initThreadImpl()
         } catch (e: Exception) {
-            initStarted = false
+            initStarted.set(false)
             throw e
         }
     }
@@ -96,21 +94,22 @@ class RabbitMqConn @JvmOverloads constructor(
                             "information ${props["information"]}"
                     }
 
-                    this.connection = connection
+                    synchronized(this.connection) {
+                        this.connection.set(connection)
 
-                    var action = postInitActions.poll()
-                    while (action != null) {
-                        action.accept(connection)
-                        action = postInitActions.poll()
+                        var action = postInitActions.poll()
+                        while (action != null) {
+                            action.accept(connection)
+                            action = postInitActions.poll()
+                        }
+
+                        initFuture.complete(true)
                     }
-
-                    initFuture.complete(true)
-
                     break
                 } catch (e: Exception) {
                     connectionFailuresCount.incrementAndGet()
                     try {
-                        this.connection = null
+                        this.connection.set(null)
                         if (connection?.isOpen == true) {
                             connection.close()
                         }
@@ -165,19 +164,21 @@ class RabbitMqConn @JvmOverloads constructor(
     }
 
     override fun doWithConnection(action: Consumer<Connection>) {
-        val connection = this.connection
-        if (connection != null) {
-            action.accept(connection)
-        } else {
-            postInitActions.add(action)
-            init()
+        synchronized(this.connection) {
+            val connection = this.connection.get()
+            if (connection != null) {
+                action.accept(connection)
+            } else {
+                postInitActions.add(action)
+                init()
+            }
         }
     }
 
     fun close() {
         if (!wasClosed.get()) {
-            if (connection?.isOpen == true) {
-                connection?.close()
+            if (connection.get()?.isOpen == true) {
+                connection.get()?.close()
             }
             Runtime.getRuntime().removeShutdownHook(shutdownHook)
             wasClosed.set(true)
