@@ -23,6 +23,12 @@ class RabbitMqChannel(
         const val PARSING_ERRORS_QUEUE = "ecos.msg.parsing-errors.queue"
 
         private const val HEADER_MM_SCOPE = "ECOS-RMQ-Micrometer-Scope"
+
+        // message doesn't survive in any queue after rabbit restart
+        private const val DELIVERY_MODE_NON_PERSISTENT = 1
+        // message survive in durable queue after rabbit restart
+        private const val DELIVERY_MODE_PERSISTENT = 2
+
         val nameEscaper = NameUtils.getEscaperWithAllowedChars(".-:")
 
         private val strStrMapType = Json.mapper.getMapType(String::class.java, String::class.java)
@@ -207,12 +213,14 @@ class RabbitMqChannel(
                 fullHeaders
             }
 
-            val props = MessageProperties.MINIMAL_PERSISTENT_BASIC
-                .builder()
-                .headers(msgHeaders)
+            val props = MessageProperties.MINIMAL_BASIC.builder()
             if (ttl > 0) {
                 props.expiration(ttl.toString())
+                props.deliveryMode(DELIVERY_MODE_NON_PERSISTENT)
+            } else {
+                props.deliveryMode(DELIVERY_MODE_PERSISTENT)
             }
+            props.headers(msgHeaders)
 
             channel.basicPublish(nameEscaper.escape(exchange), routingKey, props.build(), body)
         }
