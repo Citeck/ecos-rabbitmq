@@ -207,7 +207,9 @@ class RabbitMqChannel(
                 fullHeaders
             }
 
-            val props = AMQP.BasicProperties.Builder().headers(msgHeaders)
+            val props = MessageProperties.MINIMAL_PERSISTENT_BASIC
+                .builder()
+                .headers(msgHeaders)
             if (ttl > 0) {
                 props.expiration(ttl.toString())
             }
