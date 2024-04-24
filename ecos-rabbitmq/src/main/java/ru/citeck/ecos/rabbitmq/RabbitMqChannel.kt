@@ -216,7 +216,11 @@ class RabbitMqChannel(
             val props = MessageProperties.MINIMAL_BASIC.builder()
             if (ttl > 0) {
                 props.expiration(ttl.toString())
-                props.deliveryMode(DELIVERY_MODE_NON_PERSISTENT)
+                if (ttl < (10 * 60 * 1000 /*10 min*/)) {
+                    props.deliveryMode(DELIVERY_MODE_NON_PERSISTENT)
+                } else {
+                    props.deliveryMode(DELIVERY_MODE_PERSISTENT)
+                }
             } else {
                 props.deliveryMode(DELIVERY_MODE_PERSISTENT)
             }
