@@ -38,6 +38,10 @@ class RabbitMqChannel(
         declareQueue(PARSING_ERRORS_QUEUE, true)
     }
 
+    fun cancelConsumer(tag: String) {
+        channel.basicCancel(tag)
+    }
+
     fun <T : Any> addConsumer(
         queue: String,
         msgType: Class<T>,
