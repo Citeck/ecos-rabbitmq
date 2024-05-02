@@ -12,7 +12,7 @@ import javax.net.ssl.*
 class RabbitMqConnFactory {
 
     companion object {
-        val log = KotlinLogging.logger {}
+        private val log = KotlinLogging.logger {}
     }
 
     private lateinit var tasksApi: EcosTasksApi
@@ -91,7 +91,7 @@ class RabbitMqConnFactory {
             }
 
             val protocol = (tlsProps.protocol ?: "").ifBlank {
-                ConnectionFactory.computeDefaultTlsProcotol(SSLContext.getDefault().supportedSSLParameters.protocols)
+                RabbitMqUtils.computeDefaultTlsProtocol()
             }
 
             val context: SSLContext = SSLContext.getInstance(protocol)
