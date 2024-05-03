@@ -84,16 +84,12 @@ class RabbitMqChannel(
 
             val ackedMsg = AckedMessageImpl(msg, channel, delivery.envelope.deliveryTag)
             try {
-                @Suppress("UNCHECKED_CAST")
                 action.accept(ackedMsg, headers)
                 ackedMsg.ack()
             } catch (e: Exception) {
-                if (channel.isOpen) {
-                    try {
-                        ackedMsg.nack()
-                    } catch (nackException: Exception) {
-                        log.error(nackException) { "Exception while nack" }
-                    }
+                ackedMsg.nack()
+                if (e is InterruptedException) {
+                    Thread.currentThread().interrupt()
                 }
                 throw e
             }
