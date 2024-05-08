@@ -2,8 +2,12 @@ package ru.citeck.ecos.commons.rabbit
 
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
 import ru.citeck.ecos.rabbitmq.RabbitMqChannel.Companion.DLQ_POSTFIX
+import ru.citeck.ecos.rabbitmq.RabbitMqConn
 import ru.citeck.ecos.rabbitmq.test.EcosRabbitMqTest
 import java.time.Instant
 import java.util.concurrent.TimeUnit
@@ -11,9 +15,20 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RabbitMqRetryingMechanismTest {
 
-    private val connection = EcosRabbitMqTest.createConnection()
+    private lateinit var connection: RabbitMqConn
+
+    @BeforeEach
+    fun setUo() {
+        connection = EcosRabbitMqTest.createConnection()
+    }
+
+    @AfterEach
+    fun tearDown() {
+        connection.close()
+    }
 
     @Test
     fun `check repeat count of retrying mechanism`() {
@@ -110,8 +125,9 @@ class RabbitMqRetryingMechanismTest {
             channel.addConsumerWithRetrying(queueName, String::class.java, retryCount) { _, _ ->
                 error("Error")
             }
-            channel.addConsumer("$queueName$DLQ_POSTFIX", String::class.java) { _, _ ->
+            channel.addAckedConsumer("$queueName$DLQ_POSTFIX", String::class.java) { msg, _ ->
                 dlqMessage.set(true)
+                msg.ack()
             }
         }
 
@@ -135,8 +151,9 @@ class RabbitMqRetryingMechanismTest {
             channel.declareQueuesWithRetrying(queueName, retryDelay)
             channel.addConsumerWithRetrying(queueName, String::class.java, retryCount) { _, _ ->
             }
-            channel.addConsumer("$queueName$DLQ_POSTFIX", String::class.java) { _, _ ->
+            channel.addAckedConsumer("$queueName$DLQ_POSTFIX", String::class.java) { msg, _ ->
                 dlqMessage.set(true)
+                msg.ack()
             }
         }
 
