@@ -86,7 +86,7 @@ class RabbitMqRetryingMechanismTest {
 
     @Test
     fun `check repeat count and delay of retrying mechanism`() {
-        val queueName = "queue-retry-check-count-delay"
+        val queueName = "queue-retry-check-combination-count-delay"
         val retryCount = 5
         val retryDelay = 100L
         val actualRetry = AtomicInteger(0)
@@ -144,7 +144,7 @@ class RabbitMqRetryingMechanismTest {
 
     @Test
     fun `check message is not sent to dead letter if processed successfully`() {
-        val queueName = "queue-retry-check-success-dlq"
+        val queueName = "queue-retry-check-success-dead-letter-queue"
         val retryCount = 3
         val retryDelay = 100L
         val dlqMessage = AtomicBoolean(false)
