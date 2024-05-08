@@ -2,6 +2,7 @@ package ru.citeck.ecos.rabbitmq
 
 import com.rabbitmq.client.*
 import mu.KotlinLogging
+import org.apache.commons.lang3.exception.ExceptionUtils
 import ru.citeck.ecos.commons.json.Json
 import ru.citeck.ecos.commons.utils.NameUtils
 import ru.citeck.ecos.commons.utils.func.UncheckedBiConsumer
@@ -24,6 +25,9 @@ class RabbitMqChannel(
         const val PARSING_ERRORS_QUEUE = "ecos.msg.parsing-errors.queue"
         const val DLQ_POSTFIX = "-dlq"
         const val RETRY_POSTFIX = "-retry"
+
+        const val X_EXCEPTION_STACKTRACE: String = "x-exception-stacktrace"
+        const val X_EXCEPTION_MESSAGE: String = "x-exception-message"
 
         private const val RETRY_COUNT_HEADER = "retry-count"
 
@@ -97,20 +101,34 @@ class RabbitMqChannel(
                 override fun accept(arg0: T, arg1: Map<String, Any>) {
                     try {
                         action.invoke(arg0, arg1)
+
+                        log.trace {
+                            val retryCount = arg1.getOrDefault(RETRY_COUNT_HEADER, 0) as Int
+                            "Message processed successfully. Retry count: $retryCount, Msg: $arg0"
+                        }
                     } catch (e: Exception) {
+                        val rootCause = ExceptionUtils.getRootCause(e) ?: e
                         val retryCount = arg1.getOrDefault(RETRY_COUNT_HEADER, 0) as Int
+
+                        val headers = HashMap(arg1)
+                        headers[X_EXCEPTION_STACKTRACE] = rootCause.stackTraceToString()
+                        headers[X_EXCEPTION_MESSAGE] = rootCause.message ?: ""
+
                         if (retryCount >= maxRetryCount) {
                             log.error(e) {
-                                "Failed process msg. Max retry count reached of $maxRetryCount. Sending to DLQ $dlq"
+                                "Failed process msg. Max retry count reached of $maxRetryCount. Sending to DLQ $dlq, " +
+                                    "Msg: $arg0"
                             }
-                            publishMsg(dlq, arg0)
-                        } else {
-                            val headers = HashMap(arg1)
-                            headers[RETRY_COUNT_HEADER] = retryCount + 1
 
-                            log.warn(e) {
-                                "Failed process msg. Send message to retrying queue $retryQueue. Retry count: $retryCount"
+                            headers.remove(RETRY_COUNT_HEADER)
+                            publishMsg(dlq, arg0, headers)
+                        } else {
+                            log.debug(e) {
+                                "Failed process msg. Send message to retrying queue $retryQueue. Retry count: $retryCount, " +
+                                    "Msg: $arg0"
                             }
+
+                            headers[RETRY_COUNT_HEADER] = retryCount + 1
                             publishMsg(retryQueue, arg0, headers)
                         }
                     }
@@ -319,7 +337,9 @@ class RabbitMqChannel(
      * What doing with DLQ messages - you should decide in your implementation
      *
      * @param mainQueue queue name
-     * @param retryDelayMs delay between retries
+     * @param retryDelayMs delay between retries in milliseconds. Actually it's TTL for retry queue. Be careful to
+     * change it, because rabbitmq does not support modifying arguments on existing queue. If you want to change it,
+     * you should delete queue and create it again, otherwise it will be error on queue declare.
      */
     fun declareQueuesWithRetrying(
         mainQueue: String,
