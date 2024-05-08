@@ -59,7 +59,7 @@ class AckedMessageImpl<T : Any>(
             } else {
                 log.debug {
                     "Channel already closed and message $operationName " +
-                    "won't be executed. Delivery tag: $deliveryTag"
+                        "won't be executed. Delivery tag: $deliveryTag"
                 }
             }
         }

@@ -20,12 +20,18 @@ class RabbitMqChannel(
 
     companion object {
         val log = KotlinLogging.logger {}
+
         const val PARSING_ERRORS_QUEUE = "ecos.msg.parsing-errors.queue"
+        const val DLQ_POSTFIX = "-dlq"
+        const val RETRY_POSTFIX = "-retry"
+
+        private const val RETRY_COUNT_HEADER = "retry-count"
 
         private const val HEADER_MM_SCOPE = "ECOS-RMQ-Micrometer-Scope"
 
         // message doesn't survive in any queue after rabbit restart
         private const val DELIVERY_MODE_NON_PERSISTENT = 1
+
         // message survive in durable queue after rabbit restart
         private const val DELIVERY_MODE_PERSISTENT = 2
 
@@ -53,6 +59,61 @@ class RabbitMqChannel(
             object : UncheckedBiConsumer<T, Map<String, Any>> {
                 override fun accept(arg0: T, arg1: Map<String, Any>) {
                     return action.invoke(arg0, arg1)
+                }
+            }
+        )
+    }
+
+    /**
+     * Adds a consumer to the specified queue with retrying mechanism [declareQueuesWithRetrying].
+     *
+     * This method creates a consumer that will consume messages from the specified queue. If an exception
+     * is thrown during the processing of a message, the message will be sent to a retry queue and retried
+     * up to a maximum number of times specified by [maxRetryCount]. If the maximum retry count is reached,
+     * the message will be sent to a dead letter queue.
+     *
+     * @param queue The name of the queue to consume messages from.
+     * @param msgType The type of the messages to consume. This is used for deserializing the message body.
+     * @param maxRetryCount The maximum number of times to retry processing a message if an exception is thrown.
+     * @param action The action to perform for each consumed message. This action is a function that takes
+     *               the message and a map of message headers as parameters.
+     *
+     * @return The consumer tag for the new consumer.
+     */
+    fun <T : Any> addConsumerWithRetrying(
+        queue: String,
+        msgType: Class<T>,
+        maxRetryCount: Int,
+        action: (T, Map<String, Any>) -> Unit
+    ): String {
+
+        val validQueue = nameEscaper.escape(queue)
+        val retryQueue = "$validQueue$RETRY_POSTFIX"
+        val dlq = "$validQueue$DLQ_POSTFIX"
+
+        return addConsumer(
+            validQueue, msgType,
+            object : UncheckedBiConsumer<T, Map<String, Any>> {
+                override fun accept(arg0: T, arg1: Map<String, Any>) {
+                    try {
+                        action.invoke(arg0, arg1)
+                    } catch (e: Exception) {
+                        val retryCount = arg1.getOrDefault(RETRY_COUNT_HEADER, 0) as Int
+                        if (retryCount >= maxRetryCount) {
+                            log.error(e) {
+                                "Failed process msg. Max retry count reached of $maxRetryCount. Sending to DLQ $dlq"
+                            }
+                            publishMsg(dlq, arg0)
+                        } else {
+                            val headers = HashMap(arg1)
+                            headers[RETRY_COUNT_HEADER] = retryCount + 1
+
+                            log.warn(e) {
+                                "Failed process msg. Send message to retrying queue $retryQueue. Retry count: $retryCount"
+                            }
+                            publishMsg(retryQueue, arg0, headers)
+                        }
+                    }
                 }
             }
         )
@@ -242,6 +303,50 @@ class RabbitMqChannel(
                 !durable,
                 null
             )
+        }
+    }
+
+    /**
+     * Declare queues with retrying mechanism:
+     * - [mainQueue] - main queue
+     * - [mainQueue]-retry - queue for retrying messages
+     * - [mainQueue]-dlq - dead letter queue
+     *
+     * If message processing failed, it will be sent to retry queue, message will be delayed
+     * for [retryDelayMs] milliseconds. If message retry count exceeds maxRetryCount of [addConsumerWithRetrying] method,
+     * message will be sent to DLQ.
+     *
+     * What doing with DLQ messages - you should decide in your implementation
+     *
+     * @param mainQueue queue name
+     * @param retryDelayMs delay between retries
+     */
+    fun declareQueuesWithRetrying(
+        mainQueue: String,
+        retryDelayMs: Long,
+        durable: Boolean = true
+    ) {
+        val validQueue = nameEscaper.escape(mainQueue)
+        val retryQueue = "$mainQueue$RETRY_POSTFIX"
+        val deadLetterQueue = "$mainQueue$DLQ_POSTFIX"
+
+        if (context.declaredQueues.add(validQueue)) {
+            val args = HashMap<String, Any>()
+            args["x-dead-letter-exchange"] = ""
+            args["x-dead-letter-routing-key"] = retryQueue
+            channel.queueDeclare(validQueue, durable, false, !durable, args)
+        }
+
+        if (context.declaredQueues.add(retryQueue)) {
+            val args = HashMap<String, Any>()
+            args["x-dead-letter-exchange"] = ""
+            args["x-dead-letter-routing-key"] = validQueue
+            args["x-message-ttl"] = retryDelayMs
+            channel.queueDeclare(retryQueue, durable, false, !durable, args)
+        }
+
+        if (context.declaredQueues.add(deadLetterQueue)) {
+            channel.queueDeclare(deadLetterQueue, durable, false, !durable, null)
         }
     }
 
