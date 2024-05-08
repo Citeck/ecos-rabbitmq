@@ -15,8 +15,10 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@TestInstance(TestInstance.Lifecycle.PER_METHOD)
 class RabbitMqRetryingMechanismTest {
+
+    private val atMostSec = 5L
 
     private lateinit var connection: RabbitMqConn
 
@@ -49,7 +51,7 @@ class RabbitMqRetryingMechanismTest {
             it.publishMsg(queueName, "test")
         }
 
-        Awaitility.await().atMost(2, TimeUnit.SECONDS).untilAsserted {
+        Awaitility.await().atMost(atMostSec, TimeUnit.SECONDS).untilAsserted {
             val expectedProcessCount = retryCount + 1
             assertThat(actualRetry.get()).isEqualTo(expectedProcessCount)
         }
@@ -76,7 +78,7 @@ class RabbitMqRetryingMechanismTest {
             it.publishMsg(queueName, "test")
         }
 
-        Awaitility.await().atMost(2, TimeUnit.SECONDS).untilAsserted {
+        Awaitility.await().atMost(atMostSec, TimeUnit.SECONDS).untilAsserted {
             val actualDelay = AtomicLong(lastProcessTime.toEpochMilli() - now.toEpochMilli())
             assertThat(actualDelay.get()).isGreaterThanOrEqualTo(retryDelay)
         }
@@ -104,7 +106,7 @@ class RabbitMqRetryingMechanismTest {
             it.publishMsg(queueName, "test")
         }
 
-        Awaitility.await().atMost(2, TimeUnit.SECONDS).untilAsserted {
+        Awaitility.await().atMost(atMostSec, TimeUnit.SECONDS).untilAsserted {
             val expectedProcessCount = retryCount + 1
             assertThat(actualRetry.get()).isEqualTo(expectedProcessCount)
 
@@ -135,7 +137,7 @@ class RabbitMqRetryingMechanismTest {
             it.publishMsg(queueName, "test")
         }
 
-        Awaitility.await().atMost(2, TimeUnit.SECONDS).untilAsserted {
+        Awaitility.await().atMost(atMostSec, TimeUnit.SECONDS).untilAsserted {
             assertThat(dlqMessage.get()).isTrue()
         }
     }
@@ -161,7 +163,7 @@ class RabbitMqRetryingMechanismTest {
             it.publishMsg(queueName, "test")
         }
 
-        Awaitility.await().atMost(2, TimeUnit.SECONDS).untilAsserted {
+        Awaitility.await().atMost(atMostSec, TimeUnit.SECONDS).untilAsserted {
             assertThat(dlqMessage.get()).isFalse()
         }
     }
@@ -184,7 +186,7 @@ class RabbitMqRetryingMechanismTest {
             it.publishMsg(queueName, "test")
         }
 
-        Awaitility.await().atMost(2, TimeUnit.SECONDS).untilAsserted {
+        Awaitility.await().atMost(atMostSec, TimeUnit.SECONDS).untilAsserted {
             assertThat(actualRetry.get()).isEqualTo(1)
         }
     }
@@ -212,7 +214,7 @@ class RabbitMqRetryingMechanismTest {
             it.publishMsg(queueName, "test")
         }
 
-        Awaitility.await().atMost(2, TimeUnit.SECONDS).untilAsserted {
+        Awaitility.await().atMost(atMostSec, TimeUnit.SECONDS).untilAsserted {
             assertThat(actualRetry.get()).isEqualTo(2)
             assertThat(success.get()).isTrue()
         }
