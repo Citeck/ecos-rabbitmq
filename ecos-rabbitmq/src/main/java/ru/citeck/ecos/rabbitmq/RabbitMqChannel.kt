@@ -49,7 +49,9 @@ class RabbitMqChannel(
     }
 
     fun cancelConsumer(tag: String) {
-        channel.basicCancel(tag)
+        doWithoutAlreadyClosedException {
+            channel.basicCancel(tag)
+        }
     }
 
     fun <T : Any> addConsumer(
@@ -391,7 +393,27 @@ class RabbitMqChannel(
     }
 
     fun close() {
-        channel.close()
+        doWithoutAlreadyClosedException {
+            channel.close()
+        }
+    }
+
+    fun isOpen(): Boolean {
+        return channel.isOpen
+    }
+
+    /**
+     * Method required to perform cancel/close action without exception about channel or connection is closed.
+     * Simple check if (isOpen) { action.invoke() } doesn't help because required logic
+     * in AutorecoveringChannel and AutorecoveringConnection won't be executed and consumer or channel
+     * may be unexpectedly recovered.
+     */
+    private fun doWithoutAlreadyClosedException(action: () -> Unit) {
+        try {
+            return action.invoke()
+        } catch (e: AlreadyClosedException) {
+            log.debug { "Already closed exception. Msg: ${e.message}" }
+        }
     }
 
     class ParsingError(
