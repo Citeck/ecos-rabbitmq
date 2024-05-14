@@ -1,8 +1,11 @@
 package ru.citeck.ecos.rabbitmq
 
 import com.rabbitmq.client.*
+import ecos.guava30.com.google.common.io.BaseEncoding
+import ecos.guava30.com.google.common.primitives.Longs
 import mu.KotlinLogging
 import org.apache.commons.lang3.exception.ExceptionUtils
+import ru.citeck.ecos.commons.crc.CRC64
 import ru.citeck.ecos.commons.json.Json
 import ru.citeck.ecos.commons.utils.NameUtils
 import ru.citeck.ecos.commons.utils.func.UncheckedBiConsumer
@@ -11,12 +14,19 @@ import ru.citeck.ecos.rabbitmq.ack.AckedMessage
 import ru.citeck.ecos.rabbitmq.ack.AckedMessageImpl
 import ru.citeck.ecos.rabbitmq.obs.RmqConsumeObsContext
 import ru.citeck.ecos.rabbitmq.obs.RmqPublishObsContext
+import ru.citeck.ecos.webapp.api.EcosWebAppApi
 import java.io.InputStream
+import java.security.SecureRandom
+import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.collections.HashMap
+import kotlin.collections.LinkedHashMap
 
 class RabbitMqChannel(
     private val channel: Channel,
     private val context: RabbitMqConnCtx,
-    private val micrometerContext: EcosMicrometerContext
+    private val micrometerContext: EcosMicrometerContext,
+    private val webAppApi: EcosWebAppApi? = null
 ) {
 
     companion object {
@@ -44,11 +54,14 @@ class RabbitMqChannel(
         private val strStrMapType = Json.mapper.getMapType(String::class.java, String::class.java)
     }
 
+    private val activeConsumers = Collections.newSetFromMap<String>(ConcurrentHashMap())
+
     init {
         declareQueue(PARSING_ERRORS_QUEUE, true)
     }
 
     fun cancelConsumer(tag: String) {
+        activeConsumers.remove(tag)
         doWithoutAlreadyClosedException {
             channel.basicCancel(tag)
         }
@@ -188,47 +201,85 @@ class RabbitMqChannel(
         }
     }
 
-    private inline fun <T : Any> basicConsumeImpl(
+    private fun <T : Any> basicConsumeImpl(
         queue: String,
         autoAck: Boolean,
         msgType: Class<out T>,
-        crossinline action: (T, Map<String, Any>, Delivery) -> Unit
+        action: (T, Map<String, Any>, Delivery) -> Unit
     ): String {
-        val escapedQueueName = nameEscaper.escape(queue)
 
-        return channel.basicConsume(
-            escapedQueueName,
-            autoAck,
-            { _, message: Delivery ->
-                run {
-                    val body: T? = if (msgType == Delivery::class.java) {
-                        @Suppress("UNCHECKED_CAST")
-                        message as T
-                    } else {
-                        context.fromMsgBodyBytes(message.body, msgType)
-                    }
-                    if (body == null) {
-                        publishMsg(PARSING_ERRORS_QUEUE, ParsingError(message))
-                    } else {
-                        val headers = message.properties.headers ?: emptyMap()
-                        val mmScope = parseStringStringMapHeader(headers[HEADER_MM_SCOPE])
-                        micrometerContext.doWithinExtScope(mmScope) {
-                            micrometerContext.createObs(
-                                RmqConsumeObsContext(
-                                    escapedQueueName,
-                                    autoAck,
-                                    msgType,
-                                    this
-                                )
-                            ).observe {
-                                action.invoke(body, headers, message)
-                            }
-                        }
+        val escapedQueueName = nameEscaper.escape(queue)
+        val consumerTag = generateConsumerTag()
+        if (consumerTag.isNotBlank()) {
+            activeConsumers.add(consumerTag)
+        }
+
+        fun processMsg(message: Delivery) {
+            val body: T? = if (msgType == Delivery::class.java) {
+                @Suppress("UNCHECKED_CAST")
+                message as T
+            } else {
+                context.fromMsgBodyBytes(message.body, msgType)
+            }
+            if (body == null) {
+                publishMsg(PARSING_ERRORS_QUEUE, ParsingError(message))
+            } else {
+                val headers = message.properties.headers ?: emptyMap()
+                val mmScope = parseStringStringMapHeader(headers[HEADER_MM_SCOPE])
+                micrometerContext.doWithinExtScope(mmScope) {
+                    micrometerContext.createObs(
+                        RmqConsumeObsContext(
+                            escapedQueueName,
+                            autoAck,
+                            msgType,
+                            this
+                        )
+                    ).observe {
+                        action.invoke(body, headers, message)
                     }
                 }
-            },
-            { consumerTag: String -> log.info("Consuming cancelled. Tag: $consumerTag") }
-        )
+            }
+        }
+
+        fun startConsuming(): String {
+            return channel.basicConsume(
+                escapedQueueName,
+                autoAck,
+                consumerTag,
+                { _, message: Delivery -> processMsg(message) },
+                { cancelledConsumerTag: String -> log.info("Consuming cancelled. Tag: $cancelledConsumerTag") }
+            )
+        }
+
+        return if (webAppApi == null) {
+            val tag = startConsuming()
+            activeConsumers.add(tag)
+            return tag
+        } else {
+            webAppApi.doWhenAppReady {
+                if (activeConsumers.contains(consumerTag)) {
+                    startConsuming()
+                }
+            }
+            consumerTag
+        }
+    }
+
+    private fun generateConsumerTag(): String {
+
+        val props = webAppApi?.getProperties() ?: return ""
+
+        val crc64 = CRC64()
+
+        val rnd = SecureRandom()
+        val bytes = ByteArray(1024)
+        rnd.nextBytes(bytes)
+        crc64.update(bytes)
+
+        val rawId = BaseEncoding.base32().encode(Longs.toByteArray(crc64.value))
+        val uniqueId = rawId.lowercase().substringBefore('=').takeLast(12)
+
+        return "amq.webapp.${props.appName}.${props.appInstanceId}-$uniqueId"
     }
 
     private fun parseStringStringMapHeader(header: Any?): Map<String, String> {
@@ -393,6 +444,7 @@ class RabbitMqChannel(
     }
 
     fun close() {
+        activeConsumers.clear()
         doWithoutAlreadyClosedException {
             channel.close()
         }

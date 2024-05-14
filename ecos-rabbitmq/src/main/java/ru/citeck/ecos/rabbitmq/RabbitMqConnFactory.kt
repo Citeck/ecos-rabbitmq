@@ -5,6 +5,7 @@ import mu.KotlinLogging
 import ru.citeck.ecos.commons.x509.EcosX509Registry
 import ru.citeck.ecos.commons.x509.EmptyX509Registry
 import ru.citeck.ecos.micrometer.EcosMicrometerContext
+import ru.citeck.ecos.webapp.api.EcosWebAppApi
 import ru.citeck.ecos.webapp.api.task.EcosTasksApi
 import java.security.KeyStore
 import javax.net.ssl.*
@@ -16,16 +17,31 @@ class RabbitMqConnFactory {
     }
 
     private lateinit var tasksApi: EcosTasksApi
+    private var webAppApi: EcosWebAppApi? = null
+
     private var micrometerContext: EcosMicrometerContext = EcosMicrometerContext.NOOP
     private var x509Registry: EcosX509Registry = EmptyX509Registry
 
     @JvmOverloads
+    @Deprecated(message = "use init with EcosWebAppApi instead")
     fun init(
         tasksApi: EcosTasksApi,
         micrometerContext: EcosMicrometerContext = EcosMicrometerContext.NOOP,
         x509Registry: EcosX509Registry = EmptyX509Registry
     ) {
         this.tasksApi = tasksApi
+        this.micrometerContext = micrometerContext
+        this.x509Registry = x509Registry
+    }
+
+    @JvmOverloads
+    fun init(
+        webAppApi: EcosWebAppApi,
+        micrometerContext: EcosMicrometerContext = EcosMicrometerContext.NOOP,
+        x509Registry: EcosX509Registry = EmptyX509Registry
+    ) {
+        this.webAppApi = webAppApi
+        this.tasksApi = webAppApi.getTasksApi()
         this.micrometerContext = micrometerContext
         this.x509Registry = x509Registry
     }
@@ -109,6 +125,6 @@ class RabbitMqConnFactory {
             null
         }
 
-        return RabbitMqConn(connectionFactory, props, executor, initDelayMs, micrometerContext)
+        return RabbitMqConn(connectionFactory, props, executor, initDelayMs, micrometerContext, webAppApi)
     }
 }

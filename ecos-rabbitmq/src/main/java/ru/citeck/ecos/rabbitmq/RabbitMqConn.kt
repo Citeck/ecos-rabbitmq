@@ -5,6 +5,7 @@ import com.rabbitmq.client.ConnectionFactory
 import mu.KotlinLogging
 import ru.citeck.ecos.micrometer.EcosMicrometerContext
 import ru.citeck.ecos.rabbitmq.ds.RabbitMqConnection
+import ru.citeck.ecos.webapp.api.EcosWebAppApi
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -18,7 +19,8 @@ class RabbitMqConn @JvmOverloads constructor(
     private val props: RabbitMqConnProps,
     executor: ExecutorService? = null,
     private val initSleepMs: Long = 0L,
-    private val micrometerContext: EcosMicrometerContext = EcosMicrometerContext.NOOP
+    private val micrometerContext: EcosMicrometerContext = EcosMicrometerContext.NOOP,
+    private val webAppApi: EcosWebAppApi? = null
 ) : RabbitMqConnection {
 
     companion object {
@@ -158,7 +160,7 @@ class RabbitMqConn @JvmOverloads constructor(
             Consumer {
                 val channel = it.createChannel()
                 channel.basicQos(qos, true)
-                action.accept(RabbitMqChannel(channel, connectionContext, micrometerContext))
+                action.accept(RabbitMqChannel(channel, connectionContext, micrometerContext, webAppApi))
             }
         )
     }

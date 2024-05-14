@@ -12,7 +12,7 @@
 
     <properties>
 
-        <revision>2.8.2</revision>
+        <revision>2.8.3</revision>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
@@ -23,6 +23,8 @@
 
         <kotlin.version>1.7.10</kotlin.version>
         <kotlin.logging.version>1.12.5</kotlin.logging.version>
+
+        <ecos.guava.version>30.0.0-jre</ecos.guava.version>
 
         <ecos.commons.version>2.17.0</ecos.commons.version>
         <ecos.webapp-api.version>1.10.1</ecos.webapp-api.version>
@@ -89,6 +91,13 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
             <version>3.8.1</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>ru.citeck.ecos</groupId>
+            <artifactId>ecos-guava</artifactId>
+            <version>${ecos.guava.version}</version>
             <scope>provided</scope>
         </dependency>
 
