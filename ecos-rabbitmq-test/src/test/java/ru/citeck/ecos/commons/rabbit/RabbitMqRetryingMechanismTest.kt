@@ -6,6 +6,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import ru.citeck.ecos.rabbitmq.RabbitMqChannel
 import ru.citeck.ecos.rabbitmq.RabbitMqChannel.Companion.DLQ_POSTFIX
 import ru.citeck.ecos.rabbitmq.RabbitMqConn
 import ru.citeck.ecos.rabbitmq.test.EcosRabbitMqTest
@@ -217,6 +218,28 @@ class RabbitMqRetryingMechanismTest {
         Awaitility.await().atMost(atMostSec, TimeUnit.SECONDS).untilAsserted {
             assertThat(actualRetry.get()).isEqualTo(2)
             assertThat(success.get()).isTrue()
+        }
+    }
+
+    @Test
+    fun `check message stays in queue if no consumers registered`() {
+        val queueName = "queue-no-consumers"
+        val retryDelay = 100L
+
+        lateinit var testChannel: RabbitMqChannel
+
+        connection.doWithNewChannel { channel ->
+            testChannel = channel
+            testChannel.declareQueuesWithRetrying(queueName, retryDelay)
+        }
+
+        connection.doWithNewChannel {
+            it.publishMsg(queueName, "test")
+        }
+
+        Awaitility.await().atMost(atMostSec, TimeUnit.SECONDS).untilAsserted {
+            val queueDeclareOk = testChannel.getOriginalChannel().queueDeclarePassive(queueName)
+            assertThat(queueDeclareOk.messageCount).isEqualTo(1)
         }
     }
 }

@@ -60,6 +60,10 @@ class RabbitMqChannel(
         declareQueue(PARSING_ERRORS_QUEUE, true)
     }
 
+    fun getOriginalChannel(): Channel {
+        return channel
+    }
+
     fun cancelConsumer(tag: String) {
         activeConsumers.remove(tag)
         doWithoutAlreadyClosedException {
@@ -103,53 +107,52 @@ class RabbitMqChannel(
         queue: String,
         msgType: Class<T>,
         maxRetryCount: Int,
-        action: (T, Map<String, Any>) -> Unit
+        action: (AckedMessage<T>, Map<String, Any>) -> Unit
     ): String {
 
         val validQueue = nameEscaper.escape(queue)
         val retryQueue = "$validQueue$RETRY_POSTFIX"
         val dlq = "$validQueue$DLQ_POSTFIX"
 
-        return addConsumer(
-            validQueue, msgType,
-            object : UncheckedBiConsumer<T, Map<String, Any>> {
-                override fun accept(arg0: T, arg1: Map<String, Any>) {
-                    try {
-                        action.invoke(arg0, arg1)
+        return basicConsumeImpl(queue, false, msgType) { msg, headers, delivery ->
+            val ackedMsg = AckedMessageImpl(msg, channel, delivery.envelope.deliveryTag)
 
-                        log.trace {
-                            val retryCount = arg1.getOrDefault(RETRY_COUNT_HEADER, 0) as Int
-                            "Message processed successfully. Retry count: $retryCount, Msg: $arg0"
-                        }
-                    } catch (e: Exception) {
-                        val rootCause = ExceptionUtils.getRootCause(e) ?: e
-                        val retryCount = arg1.getOrDefault(RETRY_COUNT_HEADER, 0) as Int
-
-                        val headers = HashMap(arg1)
-                        headers[X_EXCEPTION_STACKTRACE] = rootCause.stackTraceToString()
-                        headers[X_EXCEPTION_MESSAGE] = rootCause.message ?: ""
-
-                        if (retryCount >= maxRetryCount) {
-                            log.error(e) {
-                                "Failed process msg. Max retry count reached of $maxRetryCount. Sending to DLQ $dlq, " +
-                                    "Msg: $arg0"
-                            }
-
-                            headers.remove(RETRY_COUNT_HEADER)
-                            publishMsg(dlq, arg0, headers)
-                        } else {
-                            log.debug(e) {
-                                "Failed process msg. Send message to retrying queue $retryQueue. Retry count: $retryCount, " +
-                                    "Msg: $arg0"
-                            }
-
-                            headers[RETRY_COUNT_HEADER] = retryCount + 1
-                            publishMsg(retryQueue, arg0, headers)
-                        }
-                    }
+            try {
+                action.invoke(ackedMsg, headers)
+                ackedMsg.ack()
+                log.trace {
+                    val retryCount = headers.getOrDefault(RETRY_COUNT_HEADER, 0) as Int
+                    "Message processed successfully. Retry count: $retryCount, Msg: $msg"
                 }
+            } catch (e: Exception) {
+                val rootCause = ExceptionUtils.getRootCause(e) ?: e
+                val retryCount = headers.getOrDefault(RETRY_COUNT_HEADER, 0) as Int
+
+                val headersWithMeta = HashMap(headers)
+                headersWithMeta[X_EXCEPTION_STACKTRACE] = rootCause.stackTraceToString()
+                headersWithMeta[X_EXCEPTION_MESSAGE] = rootCause.message ?: ""
+
+                if (retryCount >= maxRetryCount) {
+                    log.error(e) {
+                        "Failed process msg. Max retry count reached of $maxRetryCount. Sending to DLQ $dlq, " +
+                            "Msg: $msg"
+                    }
+
+                    headersWithMeta.remove(RETRY_COUNT_HEADER)
+                    publishMsg(dlq, msg, headersWithMeta)
+                } else {
+                    log.debug(e) {
+                        "Failed process msg. Send message to retrying queue $retryQueue. Retry count: $retryCount, " +
+                            "Msg: $msg"
+                    }
+
+                    headersWithMeta[RETRY_COUNT_HEADER] = retryCount + 1
+                    publishMsg(retryQueue, msg, headersWithMeta)
+                }
+
+                ackedMsg.ack()
             }
-        )
+        }
     }
 
     fun <T : Any> addAckedConsumer(
