@@ -15,5 +15,7 @@ interface RabbitMqConnection {
 
     fun doWithNewChannel(qos: Int, action: Consumer<RabbitMqChannel>)
 
+    fun doWithNewChannel(qos: Int, global: Boolean, action: Consumer<RabbitMqChannel>)
+
     fun doWithConnection(action: Consumer<Connection>)
 }

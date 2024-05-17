@@ -164,10 +164,14 @@ class RabbitMqConn @JvmOverloads constructor(
     }
 
     override fun doWithNewChannel(qos: Int, action: Consumer<RabbitMqChannel>) {
+        doWithNewChannel(qos, true, action)
+    }
+
+    override fun doWithNewChannel(qos: Int, global: Boolean, action: Consumer<RabbitMqChannel>) {
         doWithConnection(
             Consumer {
                 val channel = it.createChannel()
-                channel.basicQos(qos, true)
+                channel.basicQos(qos, global)
                 action.accept(RabbitMqChannel(channel, connectionContext, micrometerContext, webAppApi))
             }
         )
