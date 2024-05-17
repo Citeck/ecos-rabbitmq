@@ -5,6 +5,8 @@ import com.rabbitmq.client.ConnectionFactory
 import mu.KotlinLogging
 import ru.citeck.ecos.micrometer.EcosMicrometerContext
 import ru.citeck.ecos.rabbitmq.ds.RabbitMqConnection
+import ru.citeck.ecos.rabbitmq.publish.RabbitMqPublisher
+import ru.citeck.ecos.rabbitmq.publish.RabbitMqPublisherImpl
 import ru.citeck.ecos.webapp.api.EcosWebAppApi
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicBoolean
@@ -47,6 +49,8 @@ class RabbitMqConn @JvmOverloads constructor(
             wasClosed.set(true)
         }
     }
+
+    private val publisher by lazy { RabbitMqPublisherImpl(this) }
 
     @Synchronized
     private fun init() {
@@ -144,6 +148,10 @@ class RabbitMqConn @JvmOverloads constructor(
                 }
             }
         }
+    }
+
+    override fun getPublisher(): RabbitMqPublisher {
+        return publisher
     }
 
     override fun waitUntilReady(timeoutMs: Long) {

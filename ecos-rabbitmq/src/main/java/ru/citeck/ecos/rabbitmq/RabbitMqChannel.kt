@@ -30,7 +30,7 @@ class RabbitMqChannel(
 ) {
 
     companion object {
-        val log = KotlinLogging.logger {}
+        private val log = KotlinLogging.logger {}
 
         const val PARSING_ERRORS_QUEUE = "ecos.msg.parsing-errors.queue"
         const val DLQ_POSTFIX = "-dlq"
@@ -64,6 +64,7 @@ class RabbitMqChannel(
         return channel
     }
 
+    @Synchronized
     fun cancelConsumer(tag: String) {
         activeConsumers.remove(tag)
         doWithoutAlreadyClosedException {
@@ -71,6 +72,9 @@ class RabbitMqChannel(
         }
     }
 
+    /* ADD CONSUMER */
+
+    @Synchronized
     fun <T : Any> addConsumer(
         queue: String,
         msgType: Class<T>,
@@ -103,6 +107,7 @@ class RabbitMqChannel(
      *
      * @return The consumer tag for the new consumer.
      */
+    @Synchronized
     fun <T : Any> addConsumerWithRetrying(
         queue: String,
         msgType: Class<T>,
@@ -155,6 +160,7 @@ class RabbitMqChannel(
         }
     }
 
+    @Synchronized
     fun <T : Any> addAckedConsumer(
         queue: String,
         msgType: Class<T>,
@@ -171,6 +177,7 @@ class RabbitMqChannel(
         )
     }
 
+    @Synchronized
     fun <T : Any> addAckedConsumer(
         queue: String,
         msgType: Class<T>,
@@ -193,6 +200,7 @@ class RabbitMqChannel(
         }
     }
 
+    @Synchronized
     fun <T : Any> addConsumer(
         queue: String,
         msgType: Class<T>,
@@ -204,6 +212,7 @@ class RabbitMqChannel(
         }
     }
 
+    @Synchronized
     private fun <T : Any> basicConsumeImpl(
         queue: String,
         autoAck: Boolean,
@@ -302,6 +311,7 @@ class RabbitMqChannel(
         }
     }
 
+    @Synchronized
     @JvmOverloads
     fun publishMsg(
         queue: String,
@@ -313,6 +323,7 @@ class RabbitMqChannel(
         publishMsg("", nameEscaper.escape(queue), message, headers, ttl)
     }
 
+    @Synchronized
     @JvmOverloads
     fun publishMsg(
         exchange: String,
@@ -365,6 +376,7 @@ class RabbitMqChannel(
         }
     }
 
+    @Synchronized
     fun declareQueue(queue: String, durable: Boolean) {
 
         val validQueue = nameEscaper.escape(queue)
@@ -397,6 +409,7 @@ class RabbitMqChannel(
      * change it, because rabbitmq does not support modifying arguments on existing queue. If you want to change it,
      * you should delete queue and create it again, otherwise it will be error on queue declare.
      */
+    @Synchronized
     fun declareQueuesWithRetrying(
         mainQueue: String,
         retryDelayMs: Long,
@@ -426,10 +439,12 @@ class RabbitMqChannel(
         }
     }
 
+    @Synchronized
     fun queueBind(queue: String, exchange: String, routingKey: String) {
         channel.queueBind(nameEscaper.escape(queue), nameEscaper.escape(exchange), routingKey)
     }
 
+    @Synchronized
     fun declareExchange(exchange: String, type: BuiltinExchangeType, durable: Boolean) {
 
         val fixedExchange = nameEscaper.escape(exchange)
@@ -446,6 +461,7 @@ class RabbitMqChannel(
         }
     }
 
+    @Synchronized
     fun close() {
         activeConsumers.clear()
         doWithoutAlreadyClosedException {

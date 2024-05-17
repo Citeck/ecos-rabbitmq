@@ -2,6 +2,8 @@ package ru.citeck.ecos.rabbitmq
 
 import com.rabbitmq.client.ConnectionFactory
 import mu.KotlinLogging
+import ru.citeck.ecos.commons.bean.BeansRegistry
+import ru.citeck.ecos.commons.bean.InitializableBean
 import ru.citeck.ecos.commons.x509.EcosX509Registry
 import ru.citeck.ecos.commons.x509.EmptyX509Registry
 import ru.citeck.ecos.micrometer.EcosMicrometerContext
@@ -10,7 +12,7 @@ import ru.citeck.ecos.webapp.api.task.EcosTasksApi
 import java.security.KeyStore
 import javax.net.ssl.*
 
-class RabbitMqConnFactory {
+class RabbitMqConnFactory : InitializableBean {
 
     companion object {
         private val log = KotlinLogging.logger {}
@@ -34,16 +36,11 @@ class RabbitMqConnFactory {
         this.x509Registry = x509Registry
     }
 
-    @JvmOverloads
-    fun init(
-        webAppApi: EcosWebAppApi,
-        micrometerContext: EcosMicrometerContext = EcosMicrometerContext.NOOP,
-        x509Registry: EcosX509Registry = EmptyX509Registry
-    ) {
-        this.webAppApi = webAppApi
-        this.tasksApi = webAppApi.getTasksApi()
-        this.micrometerContext = micrometerContext
-        this.x509Registry = x509Registry
+    override fun initialize(registry: BeansRegistry) {
+        this.webAppApi = registry.getBeanOrNull(EcosWebAppApi::class.java)
+        this.tasksApi = webAppApi?.getTasksApi() ?: registry.getBean(EcosTasksApi::class.java)
+        this.micrometerContext = registry.getBeanOrNull(EcosMicrometerContext::class.java) ?: EcosMicrometerContext.NOOP
+        this.x509Registry = registry.getBeanOrNull(EcosX509Registry::class.java) ?: EmptyX509Registry
     }
 
     @JvmOverloads
