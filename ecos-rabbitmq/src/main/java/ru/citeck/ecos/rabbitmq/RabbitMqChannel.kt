@@ -1,14 +1,14 @@
 package ru.citeck.ecos.rabbitmq
 
+import com.google.common.io.BaseEncoding
+import com.google.common.primitives.Longs
 import com.rabbitmq.client.*
-import ecos.guava30.com.google.common.io.BaseEncoding
-import ecos.guava30.com.google.common.primitives.Longs
-import mu.KotlinLogging
-import org.apache.commons.lang3.exception.ExceptionUtils
+import io.github.oshai.kotlinlogging.KotlinLogging
 import ru.citeck.ecos.commons.crc.CRC64
 import ru.citeck.ecos.commons.json.Json
+import ru.citeck.ecos.commons.utils.ExceptionUtils
 import ru.citeck.ecos.commons.utils.NameUtils
-import ru.citeck.ecos.commons.utils.func.UncheckedBiConsumer
+import ru.citeck.ecos.webapp.api.func.UncheckedBiConsumer
 import ru.citeck.ecos.micrometer.EcosMicrometerContext
 import ru.citeck.ecos.rabbitmq.ack.AckedMessage
 import ru.citeck.ecos.rabbitmq.ack.AckedMessageImpl
@@ -82,7 +82,8 @@ class RabbitMqChannel(
     ): String {
 
         return addConsumer(
-            queue, msgType,
+            queue,
+            msgType,
             object : UncheckedBiConsumer<T, Map<String, Any>> {
                 override fun accept(arg0: T, arg1: Map<String, Any>) {
                     return action.invoke(arg0, arg1)
@@ -130,7 +131,7 @@ class RabbitMqChannel(
                     "Message processed successfully. Retry count: $retryCount, Msg: $msg"
                 }
             } catch (e: Exception) {
-                val rootCause = ExceptionUtils.getRootCause(e) ?: e
+                val rootCause = ExceptionUtils.getRootCause(e)
                 val retryCount = headers.getOrDefault(RETRY_COUNT_HEADER, 0) as Int
 
                 val headersWithMeta = HashMap(headers)
@@ -168,7 +169,8 @@ class RabbitMqChannel(
     ): String {
 
         return addAckedConsumer(
-            queue, msgType,
+            queue,
+            msgType,
             object : UncheckedBiConsumer<AckedMessage<T>, Map<String, Any>> {
                 override fun accept(arg0: AckedMessage<T>, arg1: Map<String, Any>) {
                     return action.invoke(arg0, arg1)

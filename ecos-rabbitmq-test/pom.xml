@@ -14,7 +14,7 @@
     </parent>
 
     <properties>
-        <ecos-test-commons.version>1.7.0</ecos-test-commons.version>
+        <ecos-test-commons.version>1.10.0</ecos-test-commons.version>
     </properties>
 
     <dependencies>
@@ -28,7 +28,6 @@
         <dependency>
             <groupId>com.rabbitmq</groupId>
             <artifactId>amqp-client</artifactId>
-            <version>${amqp-client.version}</version>
         </dependency>
 
         <dependency>
@@ -51,6 +50,11 @@
             <plugin>
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-maven-plugin</artifactId>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
             </plugin>
 
             <plugin>

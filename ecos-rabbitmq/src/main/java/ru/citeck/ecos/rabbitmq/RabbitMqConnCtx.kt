@@ -1,6 +1,6 @@
 package ru.citeck.ecos.rabbitmq
 
-import ecos.com.fasterxml.jackson210.dataformat.cbor.CBORFactory
+import com.fasterxml.jackson.dataformat.cbor.CBORFactory
 import ru.citeck.ecos.commons.json.DeserFeature
 import ru.citeck.ecos.commons.json.Json
 import ru.citeck.ecos.commons.json.JsonOptions

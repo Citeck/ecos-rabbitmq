@@ -1,7 +1,7 @@
 package ru.citeck.ecos.rabbitmq
 
 import com.rabbitmq.client.ConnectionFactory
-import mu.KotlinLogging
+import io.github.oshai.kotlinlogging.KotlinLogging
 import ru.citeck.ecos.commons.bean.BeansRegistry
 import ru.citeck.ecos.commons.bean.InitializableBean
 import ru.citeck.ecos.commons.x509.EcosX509Registry

@@ -1,7 +1,7 @@
 package ru.citeck.ecos.rabbitmq.ack
 
 import com.rabbitmq.client.Channel
-import mu.KotlinLogging
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.concurrent.atomic.AtomicBoolean
 
 class AckedMessageImpl<T : Any>(

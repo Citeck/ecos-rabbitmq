@@ -2,7 +2,7 @@ package ru.citeck.ecos.rabbitmq
 
 import com.rabbitmq.client.Connection
 import com.rabbitmq.client.ConnectionFactory
-import mu.KotlinLogging
+import io.github.oshai.kotlinlogging.KotlinLogging
 import ru.citeck.ecos.micrometer.EcosMicrometerContext
 import ru.citeck.ecos.rabbitmq.ds.RabbitMqConnection
 import ru.citeck.ecos.rabbitmq.publish.RabbitMqPublisher

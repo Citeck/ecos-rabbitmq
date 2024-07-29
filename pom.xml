@@ -10,40 +10,21 @@
     <version>${revision}</version>
     <packaging>pom</packaging>
 
+    <parent>
+        <groupId>ru.citeck.lib.commons</groupId>
+        <artifactId>citeck-lib-base-parent</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
     <properties>
 
-        <revision>2.8.6</revision>
+        <revision>2.9.0</revision>
 
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
-        <maven.compiler.target>1.8</maven.compiler.target>
-        <maven.compiler.source>1.8</maven.compiler.source>
-
-        <ecos.jackson.version>2.10.4.3</ecos.jackson.version>
-
-        <kotlin.version>1.7.10</kotlin.version>
-        <kotlin.logging.version>1.12.5</kotlin.logging.version>
-
-        <ecos.guava.version>30.0.0-jre</ecos.guava.version>
-
-        <ecos.commons.version>2.17.7</ecos.commons.version>
-        <ecos.webapp-api.version>1.10.1</ecos.webapp-api.version>
-        <ecos.context-lib.version>1.3.8</ecos.context-lib.version>
-
-        <amqp-client.version>5.4.3</amqp-client.version>
-
-        <ecos.micrometer.version>1.2.1</ecos.micrometer.version>
+        <ecos.commons.version>3.3.0</ecos.commons.version>
 
     </properties>
 
     <dependencies>
-
-        <dependency>
-            <groupId>ru.citeck.ecos</groupId>
-            <artifactId>ecos-jackson</artifactId>
-            <version>${ecos.jackson.version}</version>
-            <scope>provided</scope>
-        </dependency>
 
         <dependency>
             <groupId>ru.citeck.ecos.commons</groupId>
@@ -53,157 +34,25 @@
         </dependency>
 
         <dependency>
-            <groupId>ru.citeck.ecos.webapp</groupId>
-            <artifactId>ecos-webapp-api</artifactId>
-            <version>${ecos.webapp-api.version}</version>
+            <groupId>ru.citeck.ecos.commons</groupId>
+            <artifactId>ecos-commons-deps</artifactId>
+            <version>${ecos.commons.version}</version>
             <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>ru.citeck.ecos.context</groupId>
-            <artifactId>ecos-context-lib</artifactId>
-            <version>${ecos.context-lib.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>ru.citeck.ecos.micrometer</groupId>
-            <artifactId>ecos-micrometer</artifactId>
-            <version>${ecos.micrometer.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-stdlib-jdk8</artifactId>
-            <version>${kotlin.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.github.microutils</groupId>
-            <artifactId>kotlin-logging</artifactId>
-            <version>${kotlin.logging.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-            <version>3.8.1</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>ru.citeck.ecos</groupId>
-            <artifactId>ecos-guava</artifactId>
-            <version>${ecos.guava.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-reflect</artifactId>
-            <version>${kotlin.version}</version>
-            <scope>test</scope>
         </dependency>
 
     </dependencies>
 
     <build>
 
-        <pluginManagement>
-
-            <plugins>
-
-                <plugin>
-                    <groupId>com.github.gantsign.maven</groupId>
-                    <artifactId>ktlint-maven-plugin</artifactId>
-                    <version>1.13.1</version>
-                    <executions>
-                        <execution>
-                            <id>format</id>
-                            <goals>
-                                <goal>format</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </plugin>
-
-                <plugin>
-                    <groupId>org.jetbrains.kotlin</groupId>
-                    <artifactId>kotlin-maven-plugin</artifactId>
-                    <version>${kotlin.version}</version>
-                    <executions>
-                        <execution>
-                            <id>compile</id>
-                            <phase>compile</phase>
-                            <goals>
-                                <goal>compile</goal>
-                            </goals>
-                        </execution>
-                        <execution>
-                            <id>test-compile</id>
-                            <phase>test-compile</phase>
-                            <goals>
-                                <goal>test-compile</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                    <configuration>
-                        <jvmTarget>1.8</jvmTarget>
-                    </configuration>
-                </plugin>
-
-            </plugins>
-
-        </pluginManagement>
-
         <plugins>
 
             <plugin>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.0.0-M3</version>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-                <version>3.0.1</version>
-                <executions>
-                    <execution>
-                        <id>attach-sources</id>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
+                <artifactId>maven-enforcer-plugin</artifactId>
             </plugin>
 
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
-                <version>1.2.7</version>
-                <configuration>
-                    <updatePomFile>true</updatePomFile>
-                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>flatten</id>
-                        <phase>process-resources</phase>
-                        <goals>
-                            <goal>flatten</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>flatten.clean</id>
-                        <phase>clean</phase>
-                        <goals>
-                            <goal>clean</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
 
         </plugins>
@@ -214,30 +63,5 @@
         <module>ecos-rabbitmq</module>
         <module>ecos-rabbitmq-test</module>
     </modules>
-
-    <repositories>
-        <repository>
-            <id>citeck-public</id>
-            <url>http://nexus.citeck.ru/repository/maven-public</url>
-        </repository>
-    </repositories>
-
-    <pluginRepositories>
-        <pluginRepository>
-            <id>citeck-plugin-public</id>
-            <url>http://nexus.citeck.ru/repository/maven-public</url>
-        </pluginRepository>
-    </pluginRepositories>
-
-    <distributionManagement>
-        <repository>
-            <id>citeck-community-releases</id>
-            <url>${community.releases.distr.url}</url>
-        </repository>
-        <snapshotRepository>
-            <id>citeck-community-snapshots</id>
-            <url>${community.snapshots.distr.url}</url>
-        </snapshotRepository>
-    </distributionManagement>
 
 </project>
