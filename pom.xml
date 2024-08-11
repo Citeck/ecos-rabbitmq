@@ -18,9 +18,9 @@
 
     <properties>
 
-        <revision>2.9.0</revision>
+        <revision>2.10.0</revision>
 
-        <ecos.commons.version>3.3.0</ecos.commons.version>
+        <ecos.commons.version>3.4.0</ecos.commons.version>
 
     </properties>
 
@@ -63,5 +63,12 @@
         <module>ecos-rabbitmq</module>
         <module>ecos-rabbitmq-test</module>
     </modules>
+
+    <repositories>
+        <repository>
+            <id>citeck-public</id>
+            <url>https://nexus.citeck.ru/repository/maven-public</url>
+        </repository>
+    </repositories>
 
 </project>

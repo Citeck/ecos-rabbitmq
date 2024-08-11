@@ -3,9 +3,9 @@ package ru.citeck.ecos.commons.rabbit
 import com.rabbitmq.client.BuiltinExchangeType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import ru.citeck.ecos.commons.utils.func.UncheckedBiConsumer
 import ru.citeck.ecos.rabbitmq.RabbitMqChannel
 import ru.citeck.ecos.rabbitmq.test.EcosRabbitMqTest
+import ru.citeck.ecos.webapp.api.func.UncheckedBiConsumer
 import java.util.function.Consumer
 import kotlin.test.assertEquals
 
